@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- 允许所有HTTP明文流量（用于金山词霸API） -->
+    <base-config cleartextTrafficPermitted="true">
+        <trust-anchors>
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+    
+    <!-- 特定域名配置（金山词霸） -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">open.iciba.com</domain>
+        <domain includeSubdomains="true">iciba.com</domain>
+    </domain-config>
+</network-security-config>
+

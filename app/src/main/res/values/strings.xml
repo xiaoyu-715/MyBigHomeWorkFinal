@@ -1,0 +1,146 @@
+<resources>
+    <!-- 应用基本信息 -->
+    <string name="app_name">考研英语备考</string>
+    
+    <!-- 顶部导航栏 -->
+    <string name="app_title">考研英语备考</string>
+    <string name="user_avatar">用户头像</string>
+    <string name="settings">设置</string>
+    
+    <!-- 学习进度面板 -->
+    <string name="study_progress">学习进度</string>
+    <string name="study_days">学习天数</string>
+    <string name="vocabulary_mastered">词汇掌握量</string>
+    <string name="exam_score_trend">模考成绩趋势</string>
+    <string name="days_unit">天</string>
+    <string name="words_unit">词</string>
+    <string name="score_unit">分</string>
+    
+    <!-- 核心功能模块 -->
+    <string name="vocabulary_training">词汇训练</string>
+    <string name="vocabulary_desc">按考研大纲分类</string>
+    <string name="real_exam_practice">真题练习</string>
+    <string name="real_exam_desc">历年真题题库</string>
+    <string name="mock_exam">模拟考试</string>
+    <string name="mock_exam_desc">计时模考系统</string>
+    <string name="error_book">错题本</string>
+    <string name="error_book_desc">自动收集错题</string>
+    <string name="study_plan">学习计划</string>
+    <string name="study_plan_desc">个性化备考方案</string>
+    <string name="daily_sentence">每日一句</string>
+    <string name="daily_sentence_desc">精选考研长难句</string>
+    
+    <!-- 底部导航栏 -->
+    <string name="nav_home">首页</string>
+    <string name="nav_report">学习报告</string>
+    <string name="nav_profile">个人中心</string>
+    <string name="nav_more">更多功能</string>
+    
+    <!-- 每日任务提醒 -->
+    <string name="daily_tasks">今日任务</string>
+    <string name="tasks_completed">已完成</string>
+    <string name="tasks_remaining">待完成</string>
+    <string name="click_to_practice">点击开始练习</string>
+    
+    <!-- 通用文本 -->
+    <string name="more">更多</string>
+    <string name="view_all">查看全部</string>
+    <string name="start_learning">开始学习</string>
+    <string name="continue_learning">继续学习</string>
+    
+    <!-- 学习报告页面 -->
+    <string name="report_title">学习报告</string>
+    <string name="learning_report">学习报告</string>
+    <string name="back">返回</string>
+    <string name="share">分享</string>
+    
+    <!-- 学习概览 -->
+    <string name="study_overview">学习概览</string>
+    <string name="total_study_time">总学习时长</string>
+    <string name="total_study_hours">总学习时长</string>
+    <string name="continuous_days">连续学习天数</string>
+    <string name="vocabulary_count">词汇掌握量</string>
+    <string name="total_words_learned">累计学习词汇</string>
+    <string name="average_score">平均分数</string>
+    <string name="hours_unit">小时</string>
+    
+    
+    <!-- 各模块学习统计 -->
+    <string name="module_statistics">各模块学习统计</string>
+    <string name="vocabulary_stats">词汇训练</string>
+    <string name="reading_stats">阅读理解</string>
+    <string name="writing_stats">写作练习</string>
+    <string name="translation_stats">翻译练习</string>
+    <string name="study_time">学习时长</string>
+    <string name="accuracy_rate">正确率</string>
+    <string name="completion_rate">完成度</string>
+    
+    <!-- 学习建议 -->
+    <string name="study_suggestions">学习建议</string>
+    <string name="learning_suggestions">学习建议</string>
+    <string name="learning_achievements">学习成就</string>
+    <string name="suggestion_vocabulary">建议加强词汇记忆，每天至少学习50个新单词</string>
+    <string name="suggestion_reading">阅读理解正确率较低，建议多练习长难句分析</string>
+    <string name="suggestion_writing">写作练习时间不足，建议每周至少完成2篇作文</string>
+    <string name="suggestion_consistency">保持学习连续性，建议每天至少学习2小时</string>
+    
+    <!-- 缺失的字符串资源 -->
+    <string name="share_report">分享报告</string>
+    <string name="last_7_days">最近7天</string>
+    <string name="total_hours">总时长</string>
+    <string name="streak_days">连续天数</string>
+    <string name="chart_placeholder">图表数据加载中...</string>
+    <string name="study_progress_chart">学习进度图表</string>
+    <string name="exam_stats">真题练习</string>
+    <string name="mock_stats">模拟考试</string>
+    <string name="error_stats">错题复习</string>
+    <string name="suggestion_content">根据您的学习数据，建议重点关注词汇记忆和阅读理解练习</string>
+
+    <!-- 智谱AI 助手 (glm-4-flash免费模型) -->
+    <string name="ai_assistant">AI 学习助手</string>
+    <string name="ai_assistant_desc">智能问答与学习辅导</string>
+    <string name="chat_input_hint">输入消息...</string>
+    <string name="send">发送</string>
+
+    <!-- 文本输入翻译 -->
+    <string name="text_translation">输入翻译</string>
+    <string name="text_translation_desc">中英文互译工具</string>
+    <string name="input_hint">输入要翻译的单词或句子</string>
+    <string name="translate">翻译</string>
+    <string name="translation_result">翻译结果</string>
+    <string name="history">历史记录</string>
+    <string name="clear_history">清空历史</string>
+    <string name="copy">复制</string>
+    <string name="voice_input">语音输入</string>
+    <string name="switch_language">切换语言</string>
+    <string name="empty_history">暂无历史记录</string>
+
+    <!-- 真题练习相关 -->
+    <string name="close">关闭</string>
+    <string name="status">状态</string>
+
+    <!-- AI生成学习计划功能 -->
+    <string name="generate_study_plan">生成学习计划</string>
+    <string name="plan_selection_title">选择要保存的学习计划</string>
+    <string name="plan_saved_success">已保存 %d 个学习计划</string>
+    <string name="generating_plan">正在生成学习计划...</string>
+    <string name="generation_failed">生成失败，请重试</string>
+    <string name="view_plans">查看计划</string>
+    <string name="later">稍后查看</string>
+    <string name="plan_generated_title">学习计划已生成</string>
+    <string name="plan_generated_message">已为您生成 %d 个学习计划！\n\n是否前往查看？</string>
+    
+    <!-- 计划编辑和重新生成 -->
+    <string name="edit_plan">编辑计划</string>
+    <string name="regenerate_plan">重新生成</string>
+    <string name="regenerate_limit_reached">已达到重新生成次数限制（最多3次）</string>
+    <string name="regenerate_confirm">确定要重新生成学习计划吗？当前计划将被替换。</string>
+    <string name="regenerating">正在重新生成...</string>
+    
+    <!-- 进度提示 -->
+    <string name="progress_analyzing">正在分析对话内容...</string>
+    <string name="progress_generating">正在生成学习计划...</string>
+    <string name="progress_parsing">正在解析计划数据...</string>
+    <string name="progress_completed">生成完成！</string>
+
+</resources>

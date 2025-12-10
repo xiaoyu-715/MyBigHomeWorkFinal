@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="120dp"
+    android:height="120dp"
+    android:viewportWidth="120"
+    android:viewportHeight="120">
+    
+    <!-- 背景圆 -->
+    <path
+        android:fillColor="#F5F5F5"
+        android:pathData="M60,60m-55,0a55,55 0,1 1,110 0a55,55 0,1 1,-110 0" />
+    
+    <!-- 文档图标 -->
+    <path
+        android:fillColor="#E0E0E0"
+        android:pathData="M40,25 L70,25 L80,35 L80,95 L40,95 Z" />
+    
+    <path
+        android:fillColor="#BDBDBD"
+        android:pathData="M70,25 L70,35 L80,35 Z" />
+    
+    <!-- 横线 -->
+    <path
+        android:fillColor="#BDBDBD"
+        android:pathData="M48,50 L72,50"
+        android:strokeWidth="3"
+        android:strokeColor="#BDBDBD" />
+    
+    <path
+        android:fillColor="#BDBDBD"
+        android:pathData="M48,60 L72,60"
+        android:strokeWidth="3"
+        android:strokeColor="#BDBDBD" />
+    
+    <path
+        android:fillColor="#BDBDBD"
+        android:pathData="M48,70 L62,70"
+        android:strokeWidth="3"
+        android:strokeColor="#BDBDBD" />
+    
+    <!-- 放大镜 -->
+    <path
+        android:fillColor="#9E9E9E"
+        android:pathData="M75,70 m-12,0 a12,12 0,1 1,24 0 a12,12 0,1 1,-24 0"
+        android:strokeWidth="3"
+        android:strokeColor="#9E9E9E" />
+    
+    <path
+        android:pathData="M83,78 L95,90"
+        android:strokeWidth="4"
+        android:strokeColor="#9E9E9E"
+        android:strokeLineCap="round" />
+
+</vector>

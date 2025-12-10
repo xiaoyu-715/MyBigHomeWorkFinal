@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- 主色调 - 柔和蓝紫色系 -->
+    <color name="primary">#5E8DCE</color>
+    <color name="primary_dark">#4A7AB8</color>
+    <color name="primary_light">#D4E4F7</color>
+    <color name="primary_blue">#5E8DCE</color>
+    
+    <!-- 强调色 - 温暖橙色系 -->
+    <color name="accent">#FFA76B</color>
+    <color name="accent_orange">#FFB380</color>
+    
+    <!-- 文本颜色 - 柔和深灰 -->
+    <color name="text_primary">#2C3E50</color>
+    <color name="text_secondary">#7F8C8D</color>
+    <color name="text_hint">#BDC3C7</color>
+    
+    <!-- 背景颜色 - 极浅蓝灰 -->
+    <color name="background_light">#F8FAFB</color>
+    <color name="background_secondary">#FFFFFF</color>
+    <color name="surface">#FFFFFF</color>
+    <color name="white">#FFFFFF</color>
+    
+    <!-- 边框和分割线 - 淡色 -->
+    <color name="divider">#E8EAED</color>
+    <color name="border_light">#F0F2F5</color>
+    
+    <!-- 状态颜色 -->
+    <color name="success">#5FC88F</color>
+    <color name="success_light">#D5F4E6</color>
+    <color name="error">#E74C3C</color>
+    <color name="error_light">#FCE4E4</color>
+    <color name="warning">#F39C12</color>
+    <color name="warning_light">#FFF3CD</color>
+    <color name="info">#5E8DCE</color>
+    <color name="info_light">#D4E4F7</color>
+    
+    <!-- 灰色系 - 柔和版本 -->
+    <color name="light_gray">#F5F7FA</color>
+    <color name="gray">#95A5A6</color>
+    <color name="dark_gray">#6C7A89</color>
+    
+    <!-- 橙色系 - 柔和版本 -->
+    <color name="light_orange">#FFF5EE</color>
+    <color name="orange">#FFB380</color>
+    <color name="dark_orange">#E67E50</color>
+    <color name="warning_orange">#FFB380</color>
+    
+    <!-- 蓝色系 - 柔和版本 -->
+    <color name="light_blue">#EBF3FA</color>
+    <color name="blue">#5E8DCE</color>
+    <color name="dark_blue">#4A7AB8</color>
+    
+    <!-- 绿色系 - 清新版本 -->
+    <color name="success_green">#5FC88F</color>
+    <color name="correct_green">#5FC88F</color>
+    <color name="light_green">#D5F4E6</color>
+    <color name="dark_green">#3FA76B</color>
+    
+    <!-- 红色系 - 柔和版本 -->
+    <color name="error_red">#E74C3C</color>
+    <color name="light_red">#FCE4E4</color>
+    <color name="dark_red">#C0392B</color>
+    
+    <!-- 卡片和背景 -->
+    <color name="background_card">#FFFFFF</color>
+    <color name="background_primary">#F8FAFB</color>
+    
+    <!-- 文本颜色补充 -->
+    <color name="text_tertiary">#95A5A6</color>
+    
+    <!-- 其他颜色 -->
+    <color name="colorGray">#7F8C8D</color>
+    
+    <!-- 渐变色 - 用于创建美观的渐变效果 -->
+    <color name="gradient_start_blue">#6E9FD8</color>
+    <color name="gradient_end_purple">#9B8FD6</color>
+    <color name="gradient_start_orange">#FFCA9B</color>
+    <color name="gradient_end_peach">#FFA79B</color>
+    
+    <!-- 真题系统专用颜色 -->
+    <color name="primary_blue_light">#E3F2FD</color>
+    
+    <!-- 通用背景颜色 -->
+    <color name="background">#F5F7FA</color>
+    
+    <!-- ========== 学习计划生成UI优化配色 ========== -->
+    
+    <!-- 主题渐变色 - 紫色系 -->
+    <color name="primary_gradient_start">#6B4FD8</color>
+    <color name="primary_gradient_end">#8B7FE8</color>
+    
+    <!-- 优先级渐变色 - 高 -->
+    <color name="priority_high_start">#FF5252</color>
+    <color name="priority_high_end">#FF7B7B</color>
+    <color name="priority_high_indicator">#FF5252</color>
+    
+    <!-- 优先级渐变色 - 中 -->
+    <color name="priority_medium_start">#FFA726</color>
+    <color name="priority_medium_end">#FFB74D</color>
+    <color name="priority_medium_indicator">#FFA726</color>
+    
+    <!-- 优先级渐变色 - 低 -->
+    <color name="priority_low_start">#42A5F5</color>
+    <color name="priority_low_end">#64B5F6</color>
+    <color name="priority_low_indicator">#42A5F5</color>
+    
+    <!-- 成功渐变色 -->
+    <color name="success_gradient_start">#4CAF50</color>
+    <color name="success_gradient_end">#66BB6A</color>
+    
+    <!-- 卡片背景色 -->
+    <color name="card_background">#FFFFFF</color>
+    <color name="card_background_selected">#F5F3FF</color>
+    
+    <!-- 文本颜色 -->
+    <color name="text_title">#1A1A1A</color>
+    <color name="text_description">#666666</color>
+    <color name="text_meta">#999999</color>
+    
+    <!-- 分隔线 -->
+    <color name="separator">#E0E0E0</color>
+    
+    <!-- 进度条颜色 -->
+    <color name="progress_background">#E8E8E8</color>
+    <color name="progress_indicator">#6B4FD8</color>
+</resources>

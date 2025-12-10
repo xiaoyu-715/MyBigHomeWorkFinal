@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="28dp"
+    android:background="@android:color/white">
+
+    <!-- 标题 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="正在生成学习计划"
+        android:textColor="@color/text_title"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingBottom="8dp" />
+
+    <!-- 副标题 -->
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="AI正在为您精心定制..."
+        android:textColor="@color/text_description"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:paddingBottom="24dp" />
+
+    <!-- 步骤指示器 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center"
+        android:paddingBottom="20dp">
+
+        <!-- 步骤1 -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <View
+                android:id="@+id/step1_indicator"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@drawable/bg_gradient_primary" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="分析"
+                android:textColor="@color/text_meta"
+                android:textSize="11sp"
+                android:layout_marginTop="6dp" />
+        </LinearLayout>
+
+        <!-- 连接线 -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="2dp"
+            android:layout_marginBottom="20dp"
+            android:background="@color/separator" />
+
+        <!-- 步骤2 -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <View
+                android:id="@+id/step2_indicator"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@color/separator" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="生成"
+                android:textColor="@color/text_meta"
+                android:textSize="11sp"
+                android:layout_marginTop="6dp" />
+        </LinearLayout>
+
+        <!-- 连接线 -->
+        <View
+            android:layout_width="40dp"
+            android:layout_height="2dp"
+            android:layout_marginBottom="20dp"
+            android:background="@color/separator" />
+
+        <!-- 步骤3 -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:gravity="center">
+
+            <View
+                android:id="@+id/step3_indicator"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:background="@color/separator" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="解析"
+                android:textColor="@color/text_meta"
+                android:textSize="11sp"
+                android:layout_marginTop="6dp" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- 进度条 -->
+    <ProgressBar
+        android:id="@+id/progress_bar"
+        style="?android:attr/progressBarStyleHorizontal"
+        android:layout_width="match_parent"
+        android:layout_height="8dp"
+        android:max="100"
+        android:progress="0"
+        android:progressTint="@color/progress_indicator"
+        android:progressBackgroundTint="@color/progress_background"
+        android:layout_marginBottom="10dp" />
+
+    <!-- 进度百分比 -->
+    <TextView
+        android:id="@+id/tv_progress_percent"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="0%"
+        android:textColor="@color/primary"
+        android:textSize="16sp"
+        android:textStyle="bold"
+        android:gravity="center"
+        android:paddingBottom="8dp" />
+
+    <!-- 当前步骤提示 -->
+    <TextView
+        android:id="@+id/tv_progress_message"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="准备开始..."
+        android:textColor="@color/text_description"
+        android:textSize="14sp"
+        android:gravity="center"
+        android:paddingBottom="20dp" />
+
+    <!-- 取消按钮 -->
+    <Button
+        android:id="@+id/btn_cancel"
+        style="@style/Widget.AppCompat.Button.Borderless"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:text="取消"
+        android:textColor="@color/text_description"
+        android:minWidth="120dp" />
+
+</LinearLayout>
