@@ -230,10 +230,35 @@ public class InAppAutomationManager {
             messages.add(new ZhipuAIService.ChatMessage("system", systemPrompt));
             messages.add(new ZhipuAIService.ChatMessage("user", userPrompt));
             
-            String response = aiService.chat(messages);
+            // 使用同步方式等待AI响应
+            final String[] responseHolder = new String[1];
+            final Object lock = new Object();
             
-            if (response != null) {
-                return parseAIResponse(response, command);
+            aiService.chat(messages, new ZhipuAIService.ChatCallback() {
+                @Override
+                public void onSuccess(String response) {
+                    synchronized (lock) {
+                        responseHolder[0] = response;
+                        lock.notify();
+                    }
+                }
+                
+                @Override
+                public void onError(String error) {
+                    synchronized (lock) {
+                        responseHolder[0] = null;
+                        lock.notify();
+                    }
+                }
+            });
+            
+            // 等待响应（最多5秒）
+            synchronized (lock) {
+                lock.wait(5000);
+            }
+            
+            if (responseHolder[0] != null) {
+                return parseAIResponse(responseHolder[0], command);
             }
         } catch (Exception e) {
             Log.e(TAG, "AI解析失败", e);

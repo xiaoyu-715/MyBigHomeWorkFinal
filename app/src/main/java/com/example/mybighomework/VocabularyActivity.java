@@ -24,27 +24,46 @@ import com.example.mybighomework.database.AppDatabase;
 import com.example.mybighomework.database.entity.VocabularyRecordEntity;
 import com.example.mybighomework.database.entity.StudyRecordEntity;
 import com.example.mybighomework.database.entity.WrongQuestionEntity;
+import com.example.mybighomework.database.entity.DictionaryWordEntity;
 import com.example.mybighomework.repository.VocabularyRecordRepository;
 import com.example.mybighomework.repository.StudyRecordRepository;
 import com.example.mybighomework.repository.WrongQuestionRepository;
 import com.example.mybighomework.repository.UserSettingsRepository;
+import com.example.mybighomework.database.repository.BookRepository;
 import com.example.mybighomework.utils.ModuleStatisticsManager;
 import com.example.mybighomework.utils.TaskCompletionManager;
 import com.example.mybighomework.utils.TaskCompletionHelper;
 import com.example.mybighomework.utils.TaskProgressTracker;
+import com.example.mybighomework.utils.WordSelectorYSJ;
+import com.example.mybighomework.utils.QuestionGeneratorYSJ;
 import java.util.Date;
 
 public class VocabularyActivity extends AppCompatActivity {
 
+    // 数据源类型常量
+    public static final String EXTRA_SOURCE_TYPE = "source_type";
+    public static final String SOURCE_TYPE_DEFAULT = "default";
+    public static final String SOURCE_TYPE_BOOK = "book";
+    public static final String EXTRA_BOOK_ID = "book_id";
+    public static final String EXTRA_BOOK_NAME = "book_name";
+    public static final String EXTRA_MODE = "mode";
+
     // UI组件
     private ImageView btnBack;
     private TextView tvProgress, tvScore, tvWord, tvPhonetic, tvMeaning, tvResult;
+    private TextView btnChangeBook;
     private ImageView btnPlay, ivResult;
     private ProgressBar progressBar;
     private Button btnOptionA, btnOptionB, btnOptionC, btnOptionD;
     private Button btnNext, btnRestart, btnFinish;
     private LinearLayout layoutOptions, layoutResult;
     private LinearLayout navHome, navReport, navProfile, navMore;
+
+    // 数据源相关
+    private String sourceType = SOURCE_TYPE_DEFAULT;
+    private String bookId;
+    private String bookName;
+    private String mode = "learn";
 
     // 游戏数据
     private List<VocabularyItem> vocabularyList;
@@ -58,7 +77,13 @@ public class VocabularyActivity extends AppCompatActivity {
     private StudyRecordRepository studyRecordRepository;
     private WrongQuestionRepository wrongQuestionRepository;
     private UserSettingsRepository userSettingsRepository;
+    private BookRepository bookRepository;
     private ExecutorService executorService;
+    
+    // 工具类
+    private WordSelectorYSJ wordSelector;
+    private QuestionGeneratorYSJ questionGenerator;
+    private java.util.Map<String, String> wordIdMap = new java.util.HashMap<>();
     
     // 训练统计数据
     private int correctAnswers = 0;
@@ -91,13 +116,22 @@ public class VocabularyActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_vocabulary);
 
+        Intent intent = getIntent();
+        sourceType = intent.getStringExtra(EXTRA_SOURCE_TYPE);
+        if (sourceType == null) sourceType = SOURCE_TYPE_DEFAULT;
+        
+        if (SOURCE_TYPE_BOOK.equals(sourceType)) {
+            bookId = intent.getStringExtra(EXTRA_BOOK_ID);
+            bookName = intent.getStringExtra(EXTRA_BOOK_NAME);
+            mode = intent.getStringExtra(EXTRA_MODE);
+            if (mode == null) mode = "learn";
+        }
+
         initDatabase();
         initViews();
         initVocabularyData();
         setupClickListeners();
-        showCurrentQuestion();
         
-        // 记录训练开始时间
         trainingStartTime = System.currentTimeMillis();
     }
     
@@ -107,7 +141,11 @@ public class VocabularyActivity extends AppCompatActivity {
         studyRecordRepository = new StudyRecordRepository(database.studyRecordDao());
         wrongQuestionRepository = new WrongQuestionRepository(database.wrongQuestionDao());
         userSettingsRepository = new UserSettingsRepository(this);
+        bookRepository = new BookRepository(database);
         executorService = Executors.newSingleThreadExecutor();
+        
+        wordSelector = new WordSelectorYSJ(database.wordLearningProgressDao(), database.bookWordRelationDao());
+        questionGenerator = new QuestionGeneratorYSJ();
     }
     
     @Override
@@ -130,18 +168,27 @@ public class VocabularyActivity extends AppCompatActivity {
      */
     private void handleBackPressed() {
         if (currentQuestionIndex > 0) {
-            // 用户至少做了一道题，保存训练记录
             saveTrainingRecord();
         }
+        
+        Intent intent = new Intent(this, MainActivity.class);
+        intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_SINGLE_TOP);
+        startActivity(intent);
         finish();
     }
 
     private void initViews() {
         // 顶部控件
         btnBack = findViewById(R.id.btn_back);
+        btnChangeBook = findViewById(R.id.btn_change_book);
         tvProgress = findViewById(R.id.tv_progress);
         tvScore = findViewById(R.id.tv_score);
         progressBar = findViewById(R.id.progress_bar);
+        
+        // 如果是词书模式,显示更换词书按钮
+        if (SOURCE_TYPE_BOOK.equals(sourceType)) {
+            btnChangeBook.setVisibility(View.VISIBLE);
+        }
 
         // 单词显示区域
         tvWord = findViewById(R.id.tv_word);
@@ -175,6 +222,14 @@ public class VocabularyActivity extends AppCompatActivity {
     
 
     private void initVocabularyData() {
+        if (SOURCE_TYPE_BOOK.equals(sourceType)) {
+            loadWordsFromBook();
+        } else {
+            loadDefaultVocabulary();
+        }
+    }
+    
+    private void loadDefaultVocabulary() {
         vocabularyList = new ArrayList<>();
         
         // 添加四六级词汇数据
@@ -209,14 +264,78 @@ public class VocabularyActivity extends AppCompatActivity {
         vocabularyList.add(new VocabularyItem("generate", "[ˈdʒenəreɪt]", "v. 产生；引起", 
             new String[]{"破坏；损坏", "消除；清除", "产生；引起", "减少；降低"}, 2));
 
-        // 打乱顺序
         Collections.shuffle(vocabularyList);
         totalQuestions = Math.min(vocabularyList.size(), 10);
+        showCurrentQuestion();
+    }
+    
+    private void loadWordsFromBook() {
+        executorService.execute(() -> {
+            try {
+                AppDatabase db = AppDatabase.getInstance(this);
+                List<String> wordIds = wordSelector.selectWords(bookId, "default", mode, 20);
+                
+                if (wordIds.isEmpty()) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "没有可学习的单词", Toast.LENGTH_SHORT).show();
+                        finish();
+                    });
+                    return;
+                }
+                
+                List<DictionaryWordEntity> words = new ArrayList<>();
+                wordIdMap.clear();
+                for (String wordId : wordIds) {
+                    DictionaryWordEntity word = db.dictionaryWordDao().getWordByIdSync(wordId);
+                    if (word != null) {
+                        words.add(word);
+                        wordIdMap.put(word.getWord(), wordId);
+                    }
+                }
+                
+                List<DictionaryWordEntity> allWords = bookRepository.getWordsForBookSync(bookId);
+                List<QuestionGeneratorYSJ.VocabularyQuestion> questions = 
+                    questionGenerator.generateQuestions(words, allWords);
+                
+                vocabularyList = new ArrayList<>();
+                for (QuestionGeneratorYSJ.VocabularyQuestion q : questions) {
+                    vocabularyList.add(new VocabularyItem(
+                        q.getWord(), q.getPhonetic(), q.getMeaning(),
+                        q.getOptions(), q.getCorrectIndex()
+                    ));
+                }
+                
+                totalQuestions = vocabularyList.size();
+                
+                runOnUiThread(() -> {
+                    if (!vocabularyList.isEmpty()) {
+                        showCurrentQuestion();
+                    } else {
+                        Toast.makeText(this, "没有可学习的单词", Toast.LENGTH_SHORT).show();
+                        finish();
+                    }
+                });
+            } catch (Exception e) {
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "加载单词失败", Toast.LENGTH_SHORT).show();
+                    finish();
+                });
+            }
+        });
     }
 
     private void setupClickListeners() {
         // 返回按钮 - 保存训练数据后退出
         btnBack.setOnClickListener(v -> handleBackPressed());
+        
+        // 更换词书按钮
+        if (btnChangeBook != null) {
+            btnChangeBook.setOnClickListener(v -> {
+                Intent intent = new Intent(this, BookCategoryActivityYSJ.class);
+                startActivity(intent);
+                finish();
+            });
+        }
 
         // 播放按钮
         btnPlay.setOnClickListener(v -> playWordPronunciation());

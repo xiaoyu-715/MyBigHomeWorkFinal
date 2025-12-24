@@ -39,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout llAiAssistant;
     private LinearLayout llAutoGlmAssistant;
     private LinearLayout llTextTranslation;
+    private LinearLayout llVocabularyBook;
     private TextView tvTaskProgress;
 
     // 学习进度相关的TextView
@@ -102,6 +103,7 @@ public class MainActivity extends AppCompatActivity {
         llAiAssistant = findViewById(R.id.ll_ai_assistant);
         llAutoGlmAssistant = findViewById(R.id.ll_autoglm_assistant);
         llTextTranslation = findViewById(R.id.ll_text_translation);
+        llVocabularyBook = findViewById(R.id.ll_vocabulary_book);
         tvTaskProgress = findViewById(R.id.tv_task_progress);
 
         
@@ -116,8 +118,23 @@ public class MainActivity extends AppCompatActivity {
         llVocabulary.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, VocabularyActivity.class);
-                startActivity(intent);
+                // 检查是否有上次学习的词书
+                String lastBookId = BookSelectionActivityYSJ.getLastSelectedBookId(MainActivity.this);
+                String lastBookName = BookSelectionActivityYSJ.getLastSelectedBookName(MainActivity.this);
+                
+                if (lastBookId != null && !lastBookId.isEmpty()) {
+                    // 继续学习上次的词书
+                    Intent intent = new Intent(MainActivity.this, VocabularyActivity.class);
+                    intent.putExtra(VocabularyActivity.EXTRA_SOURCE_TYPE, VocabularyActivity.SOURCE_TYPE_BOOK);
+                    intent.putExtra(VocabularyActivity.EXTRA_BOOK_ID, lastBookId);
+                    intent.putExtra(VocabularyActivity.EXTRA_BOOK_NAME, lastBookName);
+                    intent.putExtra(VocabularyActivity.EXTRA_MODE, "learn");
+                    startActivity(intent);
+                } else {
+                    // 首次使用,跳转到分类导航界面
+                    Intent intent = new Intent(MainActivity.this, BookCategoryActivityYSJ.class);
+                    startActivity(intent);
+                }
             }
         });
         
@@ -235,6 +252,15 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void onClick(View v) {
                 Intent intent = new Intent(MainActivity.this, com.example.mybighomework.autoglm.ui.AIAssistantActivity.class);
+                startActivity(intent);
+            }
+        });
+
+        // 单词书点击事件
+        llVocabularyBook.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, VocabularyBookActivity.class);
                 startActivity(intent);
             }
         });

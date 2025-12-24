@@ -63,6 +63,27 @@
             android:name=".VocabularyActivity"
             android:exported="false" />
         <activity
+            android:name=".VocabularyBookActivity"
+            android:exported="false"
+            android:label="单词书" />
+        <activity
+            android:name=".BookDetailActivity"
+            android:exported="false"
+            android:label="词书详情" />
+        <activity
+            android:name=".BookSelectionActivityYSJ"
+            android:exported="false"
+            android:label="选择词书" />
+        <activity
+            android:name=".BookCategoryActivityYSJ"
+            android:exported="false"
+            android:label="选择分类" />
+        <activity
+            android:name=".BookLearningActivity"
+            android:exported="false"
+            android:label="词书学习"
+            android:screenOrientation="portrait" />
+        <activity
             android:name=".MockExamActivity"
             android:exported="false" />
         <activity

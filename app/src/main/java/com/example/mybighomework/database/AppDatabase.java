@@ -11,8 +11,11 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
 
 import com.example.mybighomework.database.converter.DateConverter;
 import com.example.mybighomework.database.converter.StringArrayConverter;
+import com.example.mybighomework.database.dao.BookDao;
+import com.example.mybighomework.database.dao.BookWordRelationDao;
 import com.example.mybighomework.database.dao.DailySentenceDao;
 import com.example.mybighomework.database.dao.DailyTaskDao;
+import com.example.mybighomework.database.dao.DictionaryWordDao;
 import com.example.mybighomework.database.dao.ExamAnswerDao;
 import com.example.mybighomework.database.dao.ExamDao;
 import com.example.mybighomework.database.dao.ExamProgressDao;
@@ -26,9 +29,13 @@ import com.example.mybighomework.database.dao.TranslationHistoryDao;
 import com.example.mybighomework.database.dao.UserDao;
 import com.example.mybighomework.database.dao.UserSettingsDao;
 import com.example.mybighomework.database.dao.VocabularyDao;
+import com.example.mybighomework.database.dao.WordLearningProgressDao;
 import com.example.mybighomework.database.dao.WrongQuestionDao;
+import com.example.mybighomework.database.entity.BookEntity;
+import com.example.mybighomework.database.entity.BookWordRelationEntity;
 import com.example.mybighomework.database.entity.DailySentenceEntity;
 import com.example.mybighomework.database.entity.DailyTaskEntity;
+import com.example.mybighomework.database.entity.DictionaryWordEntity;
 
 import java.util.List;
 import com.example.mybighomework.database.entity.DailyTaskEntity;
@@ -45,6 +52,7 @@ import com.example.mybighomework.database.entity.TranslationHistoryEntity;
 import com.example.mybighomework.database.entity.UserEntity;
 import com.example.mybighomework.database.entity.UserSettingsEntity;
 import com.example.mybighomework.database.entity.VocabularyRecordEntity;
+import com.example.mybighomework.database.entity.WordLearningProgressEntity;
 import com.example.mybighomework.database.entity.WrongQuestionEntity;
 
 @Database(
@@ -64,9 +72,14 @@ import com.example.mybighomework.database.entity.WrongQuestionEntity;
         ExamAnswerEntity.class,
         ExamProgressEntity.class,
         QuestionNoteEntity.class,
-        ExamResultEntity.class
+        ExamResultEntity.class,
+        // 词典数据相关实体
+        DictionaryWordEntity.class,
+        BookEntity.class,
+        BookWordRelationEntity.class,
+        WordLearningProgressEntity.class
     },
-    version = 19,
+    version = 20,
     exportSchema = false
 )
 @TypeConverters({DateConverter.class, StringArrayConverter.class})
@@ -304,6 +317,80 @@ public abstract class AppDatabase extends RoomDatabase {
             database.execSQL("ALTER TABLE daily_tasks ADD COLUMN currentProgress INTEGER NOT NULL DEFAULT 0");
         }
     };
+
+    // 版本19到20：添加词典数据相关表
+    static final Migration MIGRATION_19_20 = new Migration(19, 20) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            // 创建词典单词表
+            database.execSQL("CREATE TABLE IF NOT EXISTS dictionary_words (" +
+                "id TEXT NOT NULL PRIMARY KEY, " +
+                "word TEXT, " +
+                "phoneticUk TEXT, " +
+                "phoneticUs TEXT, " +
+                "frequency REAL NOT NULL DEFAULT 0, " +
+                "difficulty INTEGER NOT NULL DEFAULT 0, " +
+                "acknowledgeRate REAL NOT NULL DEFAULT 0, " +
+                "translation TEXT)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_dictionary_words_word ON dictionary_words(word)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_dictionary_words_difficulty ON dictionary_words(difficulty)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_dictionary_words_frequency ON dictionary_words(frequency)");
+
+            // 创建词书表
+            database.execSQL("CREATE TABLE IF NOT EXISTS books (" +
+                "id TEXT NOT NULL PRIMARY KEY, " +
+                "parentId TEXT, " +
+                "level INTEGER NOT NULL DEFAULT 0, " +
+                "bookOrder REAL NOT NULL DEFAULT 0, " +
+                "name TEXT, " +
+                "itemNum INTEGER NOT NULL DEFAULT 0, " +
+                "directItemNum INTEGER NOT NULL DEFAULT 0, " +
+                "author TEXT, " +
+                "fullName TEXT, " +
+                "comment TEXT, " +
+                "organization TEXT, " +
+                "publisher TEXT, " +
+                "version TEXT, " +
+                "flag TEXT)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_books_parentId ON books(parentId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_books_level ON books(level)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_books_bookOrder ON books(bookOrder)");
+
+            // 创建词书-单词关联表
+            database.execSQL("CREATE TABLE IF NOT EXISTS book_word_relations (" +
+                "id TEXT NOT NULL PRIMARY KEY, " +
+                "bookId TEXT NOT NULL, " +
+                "wordId TEXT NOT NULL, " +
+                "flag TEXT, " +
+                "tag TEXT, " +
+                "wordOrder INTEGER NOT NULL DEFAULT 0, " +
+                "FOREIGN KEY(bookId) REFERENCES books(id) ON DELETE CASCADE, " +
+                "FOREIGN KEY(wordId) REFERENCES dictionary_words(id) ON DELETE CASCADE)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_book_word_relations_bookId ON book_word_relations(bookId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_book_word_relations_wordId ON book_word_relations(wordId)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_book_word_relations_bookId_wordId ON book_word_relations(bookId, wordId)");
+
+            // 创建单词学习进度表
+            database.execSQL("CREATE TABLE IF NOT EXISTS word_learning_progress (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "userId TEXT, " +
+                "wordId TEXT, " +
+                "bookId TEXT, " +
+                "correctCount INTEGER NOT NULL DEFAULT 0, " +
+                "wrongCount INTEGER NOT NULL DEFAULT 0, " +
+                "isMastered INTEGER NOT NULL DEFAULT 0, " +
+                "memoryStrength INTEGER NOT NULL DEFAULT 1, " +
+                "lastStudyTime INTEGER NOT NULL DEFAULT 0, " +
+                "nextReviewTime INTEGER NOT NULL DEFAULT 0, " +
+                "reviewCount INTEGER NOT NULL DEFAULT 0, " +
+                "createdTime INTEGER NOT NULL DEFAULT 0)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_word_learning_progress_userId_wordId ON word_learning_progress(userId, wordId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_word_learning_progress_nextReviewTime ON word_learning_progress(nextReviewTime)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_word_learning_progress_isMastered ON word_learning_progress(isMastered)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_word_learning_progress_bookId ON word_learning_progress(bookId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_word_learning_progress_userId ON word_learning_progress(userId)");
+        }
+    };
     
     /**
      * 修复旧任务的actionType字段
@@ -383,6 +470,12 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract ExamResultDao examResultDao();
     public abstract StudyPhaseDao studyPhaseDao();
     public abstract DailyTaskDao dailyTaskDao();
+    
+    // 词典数据相关DAO
+    public abstract DictionaryWordDao dictionaryWordDao();
+    public abstract BookDao bookDao();
+    public abstract BookWordRelationDao bookWordRelationDao();
+    public abstract WordLearningProgressDao wordLearningProgressDao();
 
     public static AppDatabase getInstance(Context context) {
         if (INSTANCE == null) {
@@ -404,7 +497,8 @@ public abstract class AppDatabase extends RoomDatabase {
                         MIGRATION_15_16,
                         MIGRATION_16_17,
                         MIGRATION_17_18,
-                        MIGRATION_18_19
+                        MIGRATION_18_19,
+                        MIGRATION_19_20
                     )
                     .build();
 

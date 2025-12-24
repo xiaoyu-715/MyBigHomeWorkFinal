@@ -1256,20 +1256,6 @@ public class ExamAnswerActivity extends AppCompatActivity {
         }
     }
 
-        // 设置简洁的输入提示
-        etWriting.setHint("请在此输入作文内容...");
-        
-        // 恢复之前输入的写作内容
-        String savedAnswer = userAnswers.get(currentQuestionIndex);
-        if (savedAnswer != null && savedAnswer.startsWith("作文：")) {
-            etWriting.setText(savedAnswer.substring(3));
-        } else if (savedAnswer != null) {
-            etWriting.setText(savedAnswer);
-        } else {
-            etWriting.setText("");
-        }
-    }
-
     private void selectOption(int optionIndex) {
         android.util.Log.d("ExamAnswerActivity", "选择选项: 题号=" + (currentQuestionIndex + 1) + ", 选项索引=" + optionIndex + ", 选项=" + (char)('A' + optionIndex));
         
