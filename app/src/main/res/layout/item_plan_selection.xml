@@ -215,6 +215,81 @@
 
             </LinearLayout>
 
+            <!-- 阶段预览区域（可展开/收起） -->
+            <LinearLayout
+                android:id="@+id/layout_phases_section"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:layout_marginStart="36dp"
+                android:orientation="vertical"
+                android:visibility="gone"
+                tools:visibility="visible">
+
+                <!-- 分隔线 -->
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:background="@color/separator"
+                    android:layout_marginBottom="10dp" />
+
+                <!-- 阶段预览标题和展开按钮 -->
+                <LinearLayout
+                    android:id="@+id/layout_phases_header"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:gravity="center_vertical"
+                    android:background="?attr/selectableItemBackground"
+                    android:paddingVertical="4dp">
+
+                    <ImageView
+                        android:layout_width="16dp"
+                        android:layout_height="16dp"
+                        android:src="@drawable/ic_study_plan"
+                        app:tint="@color/primary" />
+
+                    <TextView
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:layout_marginStart="6dp"
+                        android:text="学习阶段"
+                        android:textColor="@color/text_title"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tv_phases_count"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textColor="@color/text_meta"
+                        android:textSize="12sp"
+                        tools:text="3个阶段" />
+
+                    <ImageView
+                        android:id="@+id/iv_phases_expand"
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:layout_marginStart="4dp"
+                        android:src="@drawable/ic_arrow_right"
+                        android:rotation="90"
+                        app:tint="@color/text_meta" />
+
+                </LinearLayout>
+
+                <!-- 阶段列表容器 -->
+                <LinearLayout
+                    android:id="@+id/layout_phases_list"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginTop="8dp"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+            </LinearLayout>
+
         </LinearLayout>
 
     </LinearLayout>

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="@drawable/bg_card_rounded"
+    android:layout_marginTop="8dp"
+    android:padding="12dp">
+
+    <!-- 阶段头部：可点击展开/收起 -->
+    <LinearLayout
+        android:id="@+id/layout_phase_header"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:background="?attr/selectableItemBackground"
+        android:paddingVertical="4dp">
+
+        <!-- 阶段序号圆圈 -->
+        <TextView
+            android:id="@+id/tv_phase_order"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:background="@drawable/circle_primary"
+            android:gravity="center"
+            android:textColor="@android:color/white"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            tools:text="1" />
+
+        <!-- 阶段名称和目标 -->
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginStart="12dp"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_phase_name"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="@color/text_title"
+                android:textSize="15sp"
+                android:textStyle="bold"
+                tools:text="基础巩固" />
+
+            <TextView
+                android:id="@+id/tv_phase_goal"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="@color/text_description"
+                android:textSize="12sp"
+                android:maxLines="2"
+                android:ellipsize="end"
+                tools:text="熟悉英语语音语调，建立听力基础" />
+
+        </LinearLayout>
+
+        <!-- 天数标签 -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_time_badge"
+            android:paddingHorizontal="8dp"
+            android:paddingVertical="4dp"
+            android:gravity="center_vertical"
+            android:layout_marginEnd="8dp">
+
+            <ImageView
+                android:layout_width="12dp"
+                android:layout_height="12dp"
+                android:src="@drawable/ic_time"
+                app:tint="@color/primary" />
+
+            <TextView
+                android:id="@+id/tv_phase_days"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:textColor="@color/primary"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                tools:text="10天" />
+
+        </LinearLayout>
+
+        <!-- 展开/收起箭头 -->
+        <ImageView
+            android:id="@+id/iv_expand_arrow"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_arrow_right"
+            android:rotation="90"
+            app:tint="@color/text_meta" />
+
+    </LinearLayout>
+
+    <!-- 任务模板列表（可展开/收起） -->
+    <LinearLayout
+        android:id="@+id/layout_tasks_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="8dp"
+        android:layout_marginStart="40dp"
+        android:visibility="gone"
+        tools:visibility="visible">
+
+        <!-- 分隔线 -->
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="@color/separator"
+            android:layout_marginBottom="8dp" />
+
+        <!-- 任务列表标题 -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="每日任务模板"
+            android:textColor="@color/text_meta"
+            android:textSize="11sp"
+            android:layout_marginBottom="6dp" />
+
+        <!-- 任务列表容器 -->
+        <LinearLayout
+            android:id="@+id/layout_task_list"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical" />
+
+    </LinearLayout>
+
+</LinearLayout>

@@ -4,6 +4,12 @@ import androidx.room.Entity;
 import androidx.room.Ignore;
 import androidx.room.PrimaryKey;
 
+/**
+ * 学习计划实体类
+ * 用户的整体学习计划，包含基本信息和多个学习阶段
+ * 
+ * Requirements: 1.1
+ */
 @Entity(tableName = "study_plans")
 public class StudyPlanEntity {
     @PrimaryKey(autoGenerate = true)
@@ -20,6 +26,39 @@ public class StudyPlanEntity {
     private boolean activeToday;
     private long createdTime;
     private long lastModifiedTime;
+    
+    // ========== 新增字段（结构化学习计划升级） ==========
+    
+    /** 计划简介（替代原description用于结构化计划） */
+    private String summary;
+    
+    /** 总天数 */
+    private int totalDays;
+    
+    /** 已完成天数 */
+    private int completedDays;
+    
+    /** 连续学习天数 */
+    private int streakDays;
+    
+    /** 累计学习时长（毫秒） */
+    private long totalStudyTime;
+    
+    /** 是否AI生成 */
+    private boolean isAiGenerated;
+    
+    /** 每日学习分钟数 */
+    private int dailyMinutes;
+    
+    // 状态常量
+    @Ignore
+    public static final String STATUS_NOT_STARTED = "未开始";
+    @Ignore
+    public static final String STATUS_IN_PROGRESS = "进行中";
+    @Ignore
+    public static final String STATUS_COMPLETED = "已完成";
+    @Ignore
+    public static final String STATUS_PAUSED = "已暂停";
 
     // 构造函数
     public StudyPlanEntity() {
@@ -84,4 +123,105 @@ public class StudyPlanEntity {
 
     public long getLastModifiedTime() { return lastModifiedTime; }
     public void setLastModifiedTime(long lastModifiedTime) { this.lastModifiedTime = lastModifiedTime; }
+
+    // ========== 新增字段的Getters和Setters ==========
+    
+    public String getSummary() { return summary; }
+    public void setSummary(String summary) { this.summary = summary; }
+
+    public int getTotalDays() { return totalDays; }
+    public void setTotalDays(int totalDays) { this.totalDays = totalDays; }
+
+    public int getCompletedDays() { return completedDays; }
+    public void setCompletedDays(int completedDays) { 
+        this.completedDays = completedDays;
+        this.lastModifiedTime = System.currentTimeMillis();
+    }
+
+    public int getStreakDays() { return streakDays; }
+    public void setStreakDays(int streakDays) { this.streakDays = streakDays; }
+
+    public long getTotalStudyTime() { return totalStudyTime; }
+    public void setTotalStudyTime(long totalStudyTime) { this.totalStudyTime = totalStudyTime; }
+
+    public boolean isAiGenerated() { return isAiGenerated; }
+    public void setAiGenerated(boolean aiGenerated) { isAiGenerated = aiGenerated; }
+
+    public int getDailyMinutes() { return dailyMinutes; }
+    public void setDailyMinutes(int dailyMinutes) { this.dailyMinutes = dailyMinutes; }
+
+    // ========== 辅助方法 ==========
+    
+    /**
+     * 检查计划是否已完成
+     */
+    @Ignore
+    public boolean isCompleted() {
+        return STATUS_COMPLETED.equals(status);
+    }
+
+    /**
+     * 检查计划是否正在进行中
+     */
+    @Ignore
+    public boolean isInProgress() {
+        return STATUS_IN_PROGRESS.equals(status);
+    }
+
+    /**
+     * 检查计划是否未开始
+     */
+    @Ignore
+    public boolean isNotStarted() {
+        return STATUS_NOT_STARTED.equals(status);
+    }
+
+    /**
+     * 检查计划是否已暂停
+     */
+    @Ignore
+    public boolean isPaused() {
+        return STATUS_PAUSED.equals(status);
+    }
+
+    /**
+     * 增加学习时长
+     * @param minutes 学习分钟数
+     */
+    @Ignore
+    public void addStudyTime(int minutes) {
+        this.totalStudyTime += minutes * 60 * 1000L; // 转换为毫秒
+        this.lastModifiedTime = System.currentTimeMillis();
+    }
+
+    /**
+     * 获取学习时长（分钟）
+     */
+    @Ignore
+    public int getTotalStudyTimeMinutes() {
+        return (int) (totalStudyTime / (60 * 1000));
+    }
+
+    /**
+     * 获取学习时长（小时）
+     */
+    @Ignore
+    public double getTotalStudyTimeHours() {
+        return totalStudyTime / (60.0 * 60 * 1000);
+    }
+
+    @Override
+    public String toString() {
+        return "StudyPlanEntity{" +
+                "id=" + id +
+                ", title='" + title + '\'' +
+                ", category='" + category + '\'' +
+                ", progress=" + progress +
+                ", status='" + status + '\'' +
+                ", totalDays=" + totalDays +
+                ", completedDays=" + completedDays +
+                ", streakDays=" + streakDays +
+                ", isAiGenerated=" + isAiGenerated +
+                '}';
+    }
 }

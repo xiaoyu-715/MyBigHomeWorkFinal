@@ -24,6 +24,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.example.mybighomework.database.AppDatabase;
+import com.example.mybighomework.database.dao.DailyTaskDao;
+import com.example.mybighomework.database.dao.StudyPhaseDao;
 import com.example.mybighomework.repository.StudyPlanRepository;
 import com.example.mybighomework.viewmodel.StudyPlanViewModel;
 
@@ -194,10 +197,23 @@ public class StudyPlanActivity extends AppCompatActivity {
 
     /**
      * 设置RecyclerView
+     * Requirements: 7.1, 7.2
      */
     private void setupRecyclerView() {
         studyPlanList = new ArrayList<>();
-        adapter = new StudyPlanAdapter(this, studyPlanList, new StudyPlanRepository(this));
+        AppDatabase database = AppDatabase.getInstance(this);
+        StudyPlanRepository repository = new StudyPlanRepository(
+            this.getApplication(),
+            database.studyPlanDao(),
+            database.studyPhaseDao(),
+            database.dailyTaskDao()
+        );
+        adapter = new StudyPlanAdapter(this, studyPlanList, repository);
+        
+        // 设置DAO用于加载阶段和任务信息
+        StudyPhaseDao studyPhaseDao = database.studyPhaseDao();
+        DailyTaskDao dailyTaskDao = database.dailyTaskDao();
+        adapter.setDaos(studyPhaseDao, dailyTaskDao);
         
         rvStudyPlans.setLayoutManager(new LinearLayoutManager(this));
         rvStudyPlans.setAdapter(adapter);
@@ -240,10 +256,12 @@ public class StudyPlanActivity extends AppCompatActivity {
     private void observeViewModel() {
         // 观察学习计划列表
         viewModel.getAllPlans().observe(this, plans -> {
+            android.util.Log.d("StudyPlanActivity", "收到计划数据更新, 数量: " + (plans != null ? plans.size() : 0));
             if (plans != null) {
                 studyPlanList.clear();
                 studyPlanList.addAll(plans);
                 adapter.updateData(studyPlanList);
+                android.util.Log.d("StudyPlanActivity", "适配器已更新");
                 
                 // 如果列表为空且不是首次加载，显示空状态
                 if (plans.isEmpty() && tvTotalCount.getText().toString().equals("0")) {
@@ -291,7 +309,21 @@ public class StudyPlanActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        // 清除适配器缓存，确保显示最新数据
+        if (adapter != null) {
+            adapter.clearCache();
+            adapter.notifyDataSetChanged();
+        }
         // 刷新统计数据
         viewModel.loadStatistics();
+    }
+    
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        // 释放适配器资源
+        if (adapter != null) {
+            adapter.release();
+        }
     }
 }

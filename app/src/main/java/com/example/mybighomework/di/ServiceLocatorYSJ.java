@@ -1,6 +1,7 @@
 package com.example.mybighomework.di;
 
 import android.content.Context;
+import android.app.Application;
 
 import com.example.mybighomework.database.AppDatabase;
 import com.example.mybighomework.repository.DailySentenceRepository;
@@ -87,7 +88,10 @@ public class ServiceLocatorYSJ {
             synchronized (ServiceLocatorYSJ.class) {
                 if (instance.studyPlanRepository == null) {
                     instance.studyPlanRepository = new StudyPlanRepository(
-                        instance.database.studyPlanDao()
+                        (Application) instance.applicationContext,
+                        instance.database.studyPlanDao(),
+                        instance.database.studyPhaseDao(),
+                        instance.database.dailyTaskDao()
                     );
                 }
             }

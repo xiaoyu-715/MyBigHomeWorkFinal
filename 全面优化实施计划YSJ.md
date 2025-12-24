@@ -68,7 +68,7 @@
 - [ ] SettingsActivity
 - [ ] LoginActivity
 - [ ] RegisterActivity
-- [ ] DeepSeekChatActivity
+- [ ] AIChatActivity
 - [ ] CameraTranslationActivity
 - [ ] TextTranslationActivity
 

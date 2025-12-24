@@ -1,0 +1,967 @@
+package com.example.mybighomework.repository;
+
+import android.app.Application;
+import android.os.Handler;
+import android.os.Looper;
+
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
+
+import com.example.mybighomework.database.dao.DailyTaskDao;
+import com.example.mybighomework.database.dao.StudyPhaseDao;
+import com.example.mybighomework.database.dao.StudyPlanDao;
+import com.example.mybighomework.database.entity.DailyTaskEntity;
+import com.example.mybighomework.database.entity.StudyPhaseEntity;
+import com.example.mybighomework.database.entity.StudyPlanEntity;
+import com.example.mybighomework.StudyPlan;
+// import com.example.mybighomework.utils.PlanStatusManager; // 暂时注释
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+/**
+ * 学习计划仓库
+ * 统一管理学习计划的数据访问
+ * 
+ * 优化说明：
+ * 1. 使用异步操作避免阻塞主线程
+ * 2. 统一错误处理机制
+ * 3. 支持LiveData响应式编程
+ * 4. 集成PlanStatusManager自动状态管理
+ */
+public class StudyPlanRepository {
+    
+    // DAO对象
+    private final StudyPlanDao studyPlanDao;
+    private final StudyPhaseDao studyPhaseDao;
+    private final DailyTaskDao dailyTaskDao;
+    
+    // 状态管理器
+    // private final PlanStatusManager planStatusManager; // 暂时注释
+    
+    // 异步执行器
+    private final ExecutorService executorService;
+    private final Handler mainHandler;
+    
+    // ==================== 接口定义 ====================
+    
+    /**
+     * 计划更新监听器
+     */
+    public interface OnPlanUpdatedListener {
+        void onPlanUpdated();
+        void onError(Exception e);
+    }
+    
+    /**
+     * 计划删除监听器
+     */
+    public interface OnPlanDeletedListener {
+        void onPlanDeleted();
+        void onError(Exception e);
+    }
+    
+    /**
+     * 计划列表加载监听器
+     */
+    public interface OnPlansLoadedListener {
+        void onPlansLoaded(List<StudyPlan> plans);
+        void onError(Exception e);
+    }
+    
+    /**
+     * 统计信息加载监听器
+     */
+    public interface OnStatisticsLoadedListener {
+        void onStatisticsLoaded(StudyStatistics statistics);
+        void onError(Exception e);
+    }
+    
+    /**
+     * 计划详情加载监听器
+     */
+    public interface OnPlanDetailsLoadedListener {
+        void onPlanDetailsLoaded(PlanWithDetails planWithDetails);
+        void onError(Exception e);
+    }
+    
+    /**
+     * 任务完成状态更新监听器
+     */
+    public interface OnTaskCompletionUpdatedListener {
+        void onTaskCompletionUpdated(DailyTaskEntity task, StudyPlanEntity plan);
+        void onError(Exception e);
+    }
+    
+    /**
+     * 保存计划监听器接口
+     */
+    public interface OnPlanSavedListener {
+        void onPlanSaved(long planId);
+        void onError(Exception e);
+    }
+    
+    /**
+     * 计划详情类
+     */
+    public static class PlanWithDetails {
+        private final StudyPlanEntity plan;
+        private final List<StudyPhaseEntity> phases;
+        private final List<DailyTaskEntity> tasks;
+        
+        public PlanWithDetails(StudyPlanEntity plan, List<StudyPhaseEntity> phases, List<DailyTaskEntity> tasks) {
+            this.plan = plan;
+            this.phases = phases;
+            this.tasks = tasks;
+        }
+        
+        public StudyPlanEntity getPlan() { return plan; }
+        public List<StudyPhaseEntity> getPhases() { return phases; }
+        public List<DailyTaskEntity> getTasks() { return tasks; }
+        
+        /**
+         * 获取指定日期的任务
+         */
+        public List<DailyTaskEntity> getTasksForDate(String date) {
+            List<DailyTaskEntity> result = new ArrayList<>();
+            if (tasks != null) {
+                for (DailyTaskEntity task : tasks) {
+                    if (date.equals(task.getDate())) {
+                        result.add(task);
+                    }
+                }
+            }
+            return result;
+        }
+    }
+    
+    /**
+     * 统计信息类
+     */
+    public static class StudyStatistics {
+        public int totalPlans;
+        public int activePlans;
+        public int completedPlans;
+        public int totalStudyTime;
+        public int streakDays;
+        
+        public StudyStatistics(int totalPlans, int activePlans, int completedPlans, int totalStudyTime, int streakDays) {
+            this.totalPlans = totalPlans;
+            this.activePlans = activePlans;
+            this.completedPlans = completedPlans;
+            this.totalStudyTime = totalStudyTime;
+            this.streakDays = streakDays;
+        }
+    }
+    
+    // ==================== 构造函数 ====================
+    
+    /**
+     * 完整构造函数
+     */
+    public StudyPlanRepository(Application application, 
+                              StudyPlanDao studyPlanDao,
+                              StudyPhaseDao studyPhaseDao,
+                              DailyTaskDao dailyTaskDao) {
+        this.studyPlanDao = studyPlanDao;
+        this.studyPhaseDao = studyPhaseDao;
+        this.dailyTaskDao = dailyTaskDao;
+        // this.planStatusManager = new PlanStatusManager(studyPlanDao, studyPhaseDao, dailyTaskDao); // 暂时注释
+        this.executorService = Executors.newFixedThreadPool(4);
+        this.mainHandler = new Handler(Looper.getMainLooper());
+    }
+    
+    /**
+     * 简化构造函数（仅计划相关）
+     */
+    public StudyPlanRepository(Application application, StudyPlanDao studyPlanDao) {
+        this(application, studyPlanDao, null, null);
+    }
+    
+    // ==================== 异步操作方法 ====================
+    
+    /**
+     * 异步添加学习计划
+     */
+    public void addStudyPlanAsync(StudyPlan studyPlan, OnPlanSavedListener listener) {
+        executorService.execute(() -> {
+            try {
+                StudyPlanEntity entity = convertToEntity(studyPlan);
+                long id = studyPlanDao.insert(entity);
+                
+                // 在主线程回调
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onPlanSaved(id);
+                    }
+                });
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onError(e);
+                    }
+                });
+            }
+        });
+    }
+    
+    /**
+     * 异步更新学习计划
+     */
+    public void updateStudyPlanAsync(StudyPlan studyPlan, OnPlanUpdatedListener listener) {
+        executorService.execute(() -> {
+            try {
+                StudyPlanEntity entity = convertToEntity(studyPlan);
+                studyPlanDao.update(entity);
+                
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onPlanUpdated();
+                    }
+                });
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onError(e);
+                    }
+                });
+            }
+        });
+    }
+    
+    /**
+     * 异步删除学习计划
+     */
+    public void deleteStudyPlanAsync(StudyPlan studyPlan, OnPlanDeletedListener listener) {
+        executorService.execute(() -> {
+            try {
+                StudyPlanEntity entity = convertToEntity(studyPlan);
+                studyPlanDao.delete(entity);
+                
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onPlanDeleted();
+                    }
+                });
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onError(e);
+                    }
+                });
+            }
+        });
+    }
+    
+    /**
+     * 异步获取所有学习计划
+     */
+    public void getAllStudyPlansAsync(OnPlansLoadedListener listener) {
+        executorService.execute(() -> {
+            try {
+                List<StudyPlanEntity> entities = studyPlanDao.getAllStudyPlans();
+                List<StudyPlan> plans = convertToStudyPlans(entities);
+                
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onPlansLoaded(plans);
+                    }
+                });
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onError(e);
+                    }
+                });
+            }
+        });
+    }
+    
+    /**
+     * 异步获取今日计划
+     */
+    public void getTodayPlansAsync(OnPlansLoadedListener listener) {
+        executorService.execute(() -> {
+            try {
+                List<StudyPlanEntity> entities = studyPlanDao.getTodayPlans();
+                List<StudyPlan> plans = convertToStudyPlans(entities);
+                
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onPlansLoaded(plans);
+                    }
+                });
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onError(e);
+                    }
+                });
+            }
+        });
+    }
+    
+    /**
+     * 异步根据状态获取计划
+     */
+    public void getPlansByStatusAsync(String status, OnPlansLoadedListener listener) {
+        executorService.execute(() -> {
+            try {
+                List<StudyPlanEntity> entities = studyPlanDao.getPlansByStatus(status);
+                List<StudyPlan> plans = convertToStudyPlans(entities);
+                
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onPlansLoaded(plans);
+                    }
+                });
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onError(e);
+                    }
+                });
+            }
+        });
+    }
+    
+    /**
+     * 异步获取统计数据
+     */
+    public void getStatisticsAsync(OnStatisticsLoadedListener listener) {
+        executorService.execute(() -> {
+            try {
+                int total = studyPlanDao.getTotalPlansCount();
+                int completed = studyPlanDao.getCompletedPlansCount();
+                int today = studyPlanDao.getTodayPlansCount();
+                
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onStatisticsLoaded(total, completed, today);
+                    }
+                });
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onError(e);
+                    }
+                });
+            }
+        });
+    }
+    
+    /**
+     * 异步搜索计划
+     */
+    public void searchPlansAsync(String keyword, OnPlansLoadedListener listener) {
+        executorService.execute(() -> {
+            try {
+                List<StudyPlanEntity> entities = studyPlanDao.searchPlans(keyword);
+                List<StudyPlan> plans = convertToStudyPlans(entities);
+                
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onPlansLoaded(plans);
+                    }
+                });
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onError(e);
+                    }
+                });
+            }
+        });
+    }
+    
+    // ==================== 同步方法（供旧代码兼容使用，不推荐） ====================
+    
+    /**
+     * @deprecated 使用addStudyPlanAsync代替
+     */
+    @Deprecated
+    public long addStudyPlan(StudyPlan studyPlan) {
+        StudyPlanEntity entity = convertToEntity(studyPlan);
+        return studyPlanDao.insert(entity);
+    }
+    
+    /**
+     * @deprecated 使用updateStudyPlanAsync代替
+     */
+    @Deprecated
+    public void updateStudyPlan(StudyPlan studyPlan) {
+        StudyPlanEntity entity = convertToEntity(studyPlan);
+        studyPlanDao.update(entity);
+    }
+    
+    // ==================== LiveData方法 ====================
+    
+    /**
+     * 获取所有学习计划的LiveData
+     */
+    public LiveData<List<StudyPlanEntity>> getAllStudyPlansLive() {
+        List<StudyPlanEntity> entities = studyPlanDao.getAllStudyPlans();
+        MutableLiveData<List<StudyPlanEntity>> liveData = new MutableLiveData<>();
+        liveData.setValue(entities);
+        return liveData;
+    }
+    
+    /**
+     * 获取活跃学习计划的LiveData
+     */
+    public LiveData<List<StudyPlanEntity>> getActiveStudyPlansLive() {
+        List<StudyPlanEntity> entities = studyPlanDao.getPlansByStatus(StudyPlanEntity.STATUS_IN_PROGRESS);
+        MutableLiveData<List<StudyPlanEntity>> liveData = new MutableLiveData<>();
+        liveData.setValue(entities);
+        return liveData;
+    }
+    
+    /**
+     * 获取已完成学习计划的LiveData
+     */
+    public LiveData<List<StudyPlanEntity>> getCompletedStudyPlansLive() {
+        List<StudyPlanEntity> entities = studyPlanDao.getPlansByStatus(StudyPlanEntity.STATUS_COMPLETED);
+        MutableLiveData<List<StudyPlanEntity>> liveData = new MutableLiveData<>();
+        liveData.setValue(entities);
+        return liveData;
+    }
+    
+    // ==================== 同步方法（供ViewModel使用） ====================
+    
+    /**
+     * 获取所有学习计划（同步版本）
+     */
+    public List<StudyPlan> getAllStudyPlans() {
+        List<StudyPlanEntity> entities = studyPlanDao.getAllStudyPlans();
+        return convertToStudyPlans(entities);
+    }
+    
+    /**
+     * 根据状态获取计划（同步版本）
+     */
+    public List<StudyPlan> getPlansByStatus(String status) {
+        List<StudyPlanEntity> entities = studyPlanDao.getPlansByStatus(status);
+        return convertToStudyPlans(entities);
+    }
+    
+    /**
+     * 获取今日学习计划（同步版本）- 返回Entity列表
+     */
+    public List<StudyPlanEntity> getTodayStudyPlans() {
+        return studyPlanDao.getTodayPlans();
+    }
+    
+    /**
+     * 根据优先级获取计划 - 返回Entity列表
+     */
+    public List<StudyPlanEntity> getStudyPlansByPriority(String priority) {
+        // 如果DAO中没有对应方法，返回所有计划
+        return studyPlanDao.getAllStudyPlans();
+    }
+    
+    /**
+     * 标记计划为已完成
+     */
+    public void markPlanAsCompleted(int planId) {
+        StudyPlanEntity plan = studyPlanDao.getStudyPlanById(planId);
+        if (plan != null) {
+            plan.setStatus(StudyPlanEntity.STATUS_COMPLETED);
+            plan.setProgress(100);
+            plan.setLastModifiedTime(System.currentTimeMillis());
+            studyPlanDao.update(plan);
+        }
+    }
+    
+    /**
+     * 更新计划进度
+     */
+    public void updatePlanProgress(int planId, int progress) {
+        StudyPlanEntity plan = studyPlanDao.getStudyPlanById(planId);
+        if (plan != null) {
+            plan.setProgress(progress);
+            plan.setLastModifiedTime(System.currentTimeMillis());
+            studyPlanDao.update(plan);
+        }
+    }
+    
+    /**
+     * 删除学习计划（同步版本）
+     */
+    public void deleteStudyPlan(StudyPlanEntity plan) {
+        studyPlanDao.delete(plan);
+    }
+    
+    /**
+     * 获取指定日期的任务列表
+     */
+    public List<DailyTaskEntity> getTasksByDate(int planId, String date) {
+        if (dailyTaskDao == null) {
+            return new ArrayList<>();
+        }
+        return dailyTaskDao.getTasksByDate(planId, date);
+    }
+    
+    /**
+     * 异步获取指定日期的任务列表
+     */
+    public LiveData<List<DailyTaskEntity>> getTasksByDateLive(int planId, String date) {
+        if (dailyTaskDao == null) {
+            return null;
+        }
+        return dailyTaskDao.getTasksByDateLive(planId, date);
+    }
+    
+    /**
+     * 获取计划的所有阶段
+     */
+    public List<StudyPhaseEntity> getPhasesByPlanId(int planId) {
+        if (studyPhaseDao == null) {
+            return new ArrayList<>();
+        }
+        return studyPhaseDao.getPhasesByPlanId(planId);
+    }
+    
+    /**
+     * 异步获取计划的所有阶段
+     */
+    public LiveData<List<StudyPhaseEntity>> getPhasesByPlanIdLive(int planId) {
+        if (studyPhaseDao == null) {
+            return null;
+        }
+        return studyPhaseDao.getPhasesByPlanIdLive(planId);
+    }
+    
+    /**
+     * 获取当前进行中的阶段
+     */
+    public StudyPhaseEntity getCurrentPhase(int planId) {
+        if (studyPhaseDao == null) {
+            return null;
+        }
+        return studyPhaseDao.getCurrentPhase(planId);
+    }
+    
+    /**
+     * 同步计划状态
+     */
+    public void syncPlanStatus(int planId, OnPlanUpdatedListener listener) {
+        if (planStatusManager == null) {
+            if (listener != null) {
+                mainHandler.post(() -> listener.onError(
+                    new IllegalStateException("Repository not initialized with status manager")));
+            }
+            return;
+        }
+        
+        executorService.execute(() -> {
+            try {
+                planStatusManager.syncPlanStatus(planId);
+                
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onPlanUpdated();
+                    }
+                });
+                
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onError(e);
+                    }
+                });
+            }
+        });
+    }
+    
+    /**
+     * 异步获取计划及其所有阶段和任务
+     */
+    public void getPlanWithDetailsAsync(int planId, OnPlanDetailsLoadedListener listener) {
+        executorService.execute(() -> {
+            try {
+                StudyPlanEntity plan = studyPlanDao.getStudyPlanById(planId);
+                if (plan == null) {
+                    mainHandler.post(() -> {
+                        if (listener != null) {
+                            listener.onError(new IllegalArgumentException("Plan not found: " + planId));
+                        }
+                    });
+                    return;
+                }
+                
+                List<StudyPhaseEntity> phases = studyPhaseDao.getPhasesByPlanId(planId);
+                List<DailyTaskEntity> tasks = dailyTaskDao.getAllTasksByPlan(planId);
+                
+                PlanWithDetails result = new PlanWithDetails(plan, phases, tasks);
+                
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onPlanDetailsLoaded(result);
+                    }
+                });
+                
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onError(e);
+                    }
+                });
+            }
+        });
+    }
+    
+    /**
+     * 同步版本：获取计划及其所有阶段和任务
+     */
+    public PlanWithDetails getPlanWithDetailsSync(int planId) {
+        if (studyPhaseDao == null || dailyTaskDao == null) {
+            throw new IllegalStateException("Repository not initialized with phase and task DAOs");
+        }
+        
+        StudyPlanEntity plan = studyPlanDao.getStudyPlanById(planId);
+        if (plan == null) {
+            return null;
+        }
+        
+        List<StudyPhaseEntity> phases = studyPhaseDao.getPhasesByPlanId(planId);
+        List<DailyTaskEntity> tasks = dailyTaskDao.getAllTasksByPlan(planId);
+        
+        return new PlanWithDetails(plan, phases, tasks);
+    }
+    
+    /**
+     * 更新任务完成状态并触发进度重算
+     */
+    public void updateTaskCompletion(
+            int taskId,
+            boolean completed,
+            int actualMinutes,
+            OnTaskCompletionUpdatedListener listener) {
+        
+        if (dailyTaskDao == null || planStatusManager == null) {
+            if (listener != null) {
+                mainHandler.post(() -> listener.onError(
+                    new IllegalStateException("Repository not initialized with task DAO")));
+            }
+            return;
+        }
+        
+        executorService.execute(() -> {
+            try {
+                // 1. 获取任务
+                DailyTaskEntity task = dailyTaskDao.getTaskById(taskId);
+                if (task == null) {
+                    mainHandler.post(() -> {
+                        if (listener != null) {
+                            listener.onError(new IllegalArgumentException("Task not found: " + taskId));
+                        }
+                    });
+                    return;
+                }
+                
+                // 2. 更新任务状态
+                long completedAt = completed ? System.currentTimeMillis() : 0;
+                int minutes = actualMinutes >= 0 ? actualMinutes : task.getEstimatedMinutes();
+                
+                dailyTaskDao.updateTaskCompletion(taskId, completed, completedAt, minutes);
+                
+                // 更新本地对象
+                task.setCompleted(completed);
+                task.setCompletedAt(completedAt);
+                task.setActualMinutes(minutes);
+                
+                // 3. 触发进度重算
+                StudyPlanEntity updatedPlan = planStatusManager.onTaskCompletionChanged(taskId);
+                
+                // 4. 更新计划的学习时长
+                if (completed && updatedPlan != null) {
+                    long additionalTime = minutes * 60 * 1000L; // 转换为毫秒
+                    updatedPlan.setTotalStudyTime(updatedPlan.getTotalStudyTime() + additionalTime);
+                    studyPlanDao.update(updatedPlan);
+                }
+                
+                final StudyPlanEntity finalPlan = updatedPlan;
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onTaskCompletionUpdated(task, finalPlan);
+                    }
+                });
+                
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onError(e);
+                    }
+                });
+            }
+        });
+    }
+    
+    /**
+     * 同步版本：更新任务完成状态并触发进度重算
+     */
+    public StudyPlanEntity updateTaskCompletionSync(int taskId, boolean completed, int actualMinutes) {
+        if (dailyTaskDao == null || planStatusManager == null) {
+            throw new IllegalStateException("Repository not initialized with task DAO");
+        }
+        
+        // 1. 获取任务
+        DailyTaskEntity task = dailyTaskDao.getTaskById(taskId);
+        if (task == null) {
+            throw new IllegalArgumentException("Task not found: " + taskId);
+        }
+        
+        // 2. 更新任务状态
+        long completedAt = completed ? System.currentTimeMillis() : 0;
+        int minutes = actualMinutes >= 0 ? actualMinutes : task.getEstimatedMinutes();
+        
+        dailyTaskDao.updateTaskCompletion(taskId, completed, completedAt, minutes);
+        
+        // 3. 触发进度重算
+        StudyPlanEntity updatedPlan = planStatusManager.onTaskCompletionChanged(taskId);
+        
+        // 4. 更新计划的学习时长
+        if (completed && updatedPlan != null) {
+            long additionalTime = minutes * 60 * 1000L;
+            updatedPlan.setTotalStudyTime(updatedPlan.getTotalStudyTime() + additionalTime);
+            studyPlanDao.update(updatedPlan);
+        }
+        
+        return updatedPlan;
+    }
+    
+    /**
+     * 切换任务完成状态
+     */
+    public void toggleTaskCompletion(int taskId, OnTaskCompletionUpdatedListener listener) {
+        if (dailyTaskDao == null) {
+            if (listener != null) {
+                mainHandler.post(() -> listener.onError(
+                    new IllegalStateException("Repository not initialized with task DAO")));
+            }
+            return;
+        }
+        
+        executorService.execute(() -> {
+            try {
+                DailyTaskEntity task = dailyTaskDao.getTaskById(taskId);
+                if (task == null) {
+                    mainHandler.post(() -> {
+                        if (listener != null) {
+                            listener.onError(new IllegalArgumentException("Task not found: " + taskId));
+                        }
+                    });
+                    return;
+                }
+                
+                // 切换状态
+                boolean newCompleted = !task.isCompleted();
+                
+                // 调用更新方法
+                updateTaskCompletion(taskId, newCompleted, task.getEstimatedMinutes(), listener);
+                
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onError(e);
+                    }
+                });
+            }
+        });
+    }
+    
+    /**
+     * 保存计划及其阶段和任务
+     */
+    public void savePlanWithPhasesAndTasks(
+            StudyPlan plan,
+            List<StudyPhaseEntity> phases,
+            List<DailyTaskEntity> tasks,
+            OnPlanSavedListener listener) {
+        
+        executorService.execute(() -> {
+            try {
+                // 1. 保存计划
+                StudyPlanEntity planEntity = convertToEntity(plan);
+                long planId = studyPlanDao.insert(planEntity);
+                planEntity.setId((int) planId);
+                
+                // 2. 保存阶段
+                if (phases != null) {
+                    for (StudyPhaseEntity phase : phases) {
+                        phase.setPlanId((int) planId);
+                        studyPhaseDao.insert(phase);
+                    }
+                }
+                
+                // 3. 保存任务
+                if (tasks != null) {
+                    for (DailyTaskEntity task : tasks) {
+                        task.setPlanId((int) planId);
+                        dailyTaskDao.insert(task);
+                    }
+                }
+                
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onPlanSaved(planId);
+                    }
+                });
+                
+            } catch (Exception e) {
+                mainHandler.post(() -> {
+                    if (listener != null) {
+                        listener.onError(e);
+                    }
+                });
+            }
+        });
+    }
+    
+    // ==================== 私有辅助方法 ====================
+    
+    /**
+     * 将StudyPlan转换为StudyPlanEntity
+     */
+    private StudyPlanEntity convertToEntity(StudyPlan studyPlan) {
+        StudyPlanEntity entity = new StudyPlanEntity();
+        entity.setId(studyPlan.getId());
+        entity.setTitle(studyPlan.getTitle());
+        entity.setDescription(studyPlan.getDescription());
+        entity.setCategory(studyPlan.getCategory()); // 使用category作为subject
+        entity.setStatus(studyPlan.getStatus());
+        entity.setPriority(studyPlan.getPriority());
+        entity.setProgress(studyPlan.getProgress());
+        entity.setTimeRange(studyPlan.getTimeRange());
+        entity.setDuration(studyPlan.getDuration());
+        entity.setActiveToday(studyPlan.isActiveToday());
+        // 设置默认值
+        entity.setTotalDays(30);
+        entity.setCompletedDays(0);
+        entity.setTotalStudyTime(0);
+        entity.setStreakDays(0);
+        entity.setCreatedTime(System.currentTimeMillis());
+        entity.setLastModifiedTime(System.currentTimeMillis());
+        entity.setAiGenerated(false);
+        entity.setDailyMinutes(120);
+        return entity;
+    }
+    
+    /**
+     * 将StudyPlanEntity列表转换为StudyPlan列表
+     */
+    private List<StudyPlan> convertToStudyPlans(List<StudyPlanEntity> entities) {
+        List<StudyPlan> plans = new ArrayList<>();
+        if (entities != null) {
+            for (StudyPlanEntity entity : entities) {
+                plans.add(convertFromEntity(entity));
+            }
+        }
+        return plans;
+    }
+    
+    /**
+     * 将StudyPlanEntity转换为StudyPlan
+     */
+    private StudyPlan convertFromEntity(StudyPlanEntity entity) {
+        StudyPlan studyPlan = new StudyPlan(
+            entity.getId(),
+            entity.getTitle(),
+            entity.getCategory(), // 使用category
+            entity.getDescription(),
+            entity.getTimeRange(),
+            entity.getDuration(),
+            entity.getProgress(),
+            entity.getPriority(),
+            entity.getStatus(),
+            entity.isActiveToday()
+        );
+        return studyPlan;
+    }
+    
+    /**
+     * 关闭资源
+     */
+    public void shutdown() {
+        if (executorService != null && !executorService.isShutdown()) {
+            executorService.shutdown();
+        }
+    }
+    
+    // ==================== 回调接口 ====================
+    
+    public interface OnPlanSavedListener {
+        void onPlanSaved(long planId);
+        void onError(Exception e);
+    }
+    
+    public interface OnPlanUpdatedListener {
+        void onPlanUpdated();
+        void onError(Exception e);
+    }
+    
+    public interface OnPlanDeletedListener {
+        void onPlanDeleted();
+        void onError(Exception e);
+    }
+    
+    public interface OnPlansLoadedListener {
+        void onPlansLoaded(List<StudyPlan> plans);
+        void onError(Exception e);
+    }
+    
+    public interface OnStatisticsLoadedListener {
+        void onStatisticsLoaded(int total, int completed, int today);
+        void onError(Exception e);
+    }
+    
+    public interface OnPlanDetailsLoadedListener {
+        void onPlanDetailsLoaded(PlanWithDetails details);
+        void onError(Exception e);
+    }
+    
+    public interface OnTaskCompletionUpdatedListener {
+        void onTaskCompletionUpdated(DailyTaskEntity task, StudyPlanEntity plan);
+        void onError(Exception e);
+    }
+    
+    // ==================== 数据类 ====================
+    
+    /**
+     * 计划详情数据类
+     */
+    public static class PlanWithDetails {
+        private final StudyPlanEntity plan;
+        private final List<StudyPhaseEntity> phases;
+        private final List<DailyTaskEntity> tasks;
+        
+        public PlanWithDetails(StudyPlanEntity plan, 
+                             List<StudyPhaseEntity> phases, 
+                             List<DailyTaskEntity> tasks) {
+            this.plan = plan;
+            this.phases = phases;
+            this.tasks = tasks;
+        }
+        
+        public StudyPlanEntity getPlan() { return plan; }
+        public List<StudyPhaseEntity> getPhases() { return phases; }
+        public List<DailyTaskEntity> getTasks() { return tasks; }
+        
+        /**
+         * 获取指定日期的任务
+         */
+        public List<DailyTaskEntity> getTasksForDate(String date) {
+            List<DailyTaskEntity> result = new ArrayList<>();
+            if (tasks != null) {
+                for (DailyTaskEntity task : tasks) {
+                    if (date.equals(task.getDate())) {
+                        result.add(task);
+                    }
+                }
+            }
+            return result;
+        }
+    }
+}

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:gravity="center_vertical"
+    android:paddingVertical="4dp">
+
+    <!-- 任务图标 -->
+    <ImageView
+        android:layout_width="16dp"
+        android:layout_height="16dp"
+        android:src="@drawable/ic_task"
+        app:tint="@color/success_green" />
+
+    <!-- 任务内容 -->
+    <TextView
+        android:id="@+id/tv_task_content"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:layout_marginStart="8dp"
+        android:textColor="@color/text_description"
+        android:textSize="13sp"
+        tools:text="听力材料精听" />
+
+    <!-- 时长标签 -->
+    <TextView
+        android:id="@+id/tv_task_minutes"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_time_badge"
+        android:paddingHorizontal="6dp"
+        android:paddingVertical="2dp"
+        android:textColor="@color/text_meta"
+        android:textSize="11sp"
+        tools:text="20分钟" />
+
+</LinearLayout>

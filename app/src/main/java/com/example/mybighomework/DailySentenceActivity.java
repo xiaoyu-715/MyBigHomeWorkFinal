@@ -25,6 +25,7 @@ import com.example.mybighomework.repository.DailySentenceRepository;
 import com.example.mybighomework.utils.AudioPlayerManager;
 import com.example.mybighomework.utils.ShareUtils;
 import com.example.mybighomework.utils.TaskCompletionManager;
+import com.example.mybighomework.utils.TaskProgressTracker;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -81,8 +82,8 @@ public class DailySentenceActivity extends AppCompatActivity {
         loadTodaySentence();
         loadHistoryData();
         
-        // 【任务完成跟踪】打开每日一句页面即完成任务
-        TaskCompletionManager.getInstance(this).markDailySentenceCompleted();
+        // 【智能任务完成跟踪】打开每日一句页面即完成任务（简单型任务）
+        TaskProgressTracker.getInstance(this).markSimpleTaskCompleted("daily_sentence");
     }
 
     private void initViews() {

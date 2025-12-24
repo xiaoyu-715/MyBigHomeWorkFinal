@@ -29,6 +29,7 @@ import com.example.mybighomework.repository.StudyRecordRepository;
 
 import com.example.mybighomework.utils.ModuleStatisticsManager;
 import com.example.mybighomework.utils.TaskCompletionManager;
+import com.example.mybighomework.utils.TaskProgressTracker;
 
 public class MockExamActivity extends AppCompatActivity {
 
@@ -638,8 +639,8 @@ public class MockExamActivity extends AppCompatActivity {
         // 更新得分显示
         tvScore.setText("得分: " + score);
         
-        // 【任务完成跟踪】每答一题，累计计数，达到20题自动完成任务
-        TaskCompletionManager.getInstance(this).incrementExamAnswerCount();
+        // 【智能任务完成跟踪】每答一题，累计计数，达到目标自动完成任务
+        TaskProgressTracker.getInstance(this).recordProgress("mock_exam", 1);
     }
 
     private void saveWrongQuestion(MockQuestion item, int userAnswerIndex) {
@@ -883,5 +884,8 @@ public class MockExamActivity extends AppCompatActivity {
         if (examTimer != null) {
             examTimer.cancel();
         }
+        
+        // 自动标记今日任务为完成
+        com.example.mybighomework.utils.TaskCompletionHelper.markTaskAsCompleted(this, "exam_practice");
     }
 }

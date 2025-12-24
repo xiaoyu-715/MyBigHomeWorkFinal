@@ -10,12 +10,17 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mybighomework.R;
 import com.example.mybighomework.database.entity.TranslationHistoryEntity;
+import com.example.mybighomework.utils.TimeFormatUtils;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
  * 翻译历史记录适配器
+ * 
+ * Requirements: 7.1, 7.2
+ * - 显示时间戳
+ * - 优化文本预览显示（最多3行）
  */
 public class TranslationHistoryAdapter extends RecyclerView.Adapter<TranslationHistoryAdapter.ViewHolder> {
     
@@ -58,12 +63,14 @@ public class TranslationHistoryAdapter extends RecyclerView.Adapter<TranslationH
         TextView tvLanguageTag;
         TextView tvSourceText;
         TextView tvTranslatedText;
+        TextView tvTimestamp;
         
         ViewHolder(@NonNull View itemView) {
             super(itemView);
             tvLanguageTag = itemView.findViewById(R.id.tv_language_tag);
             tvSourceText = itemView.findViewById(R.id.tv_source_text);
             tvTranslatedText = itemView.findViewById(R.id.tv_translated_text);
+            tvTimestamp = itemView.findViewById(R.id.tv_timestamp);
             
             itemView.setOnClickListener(v -> {
                 int position = getAdapterPosition();
@@ -78,9 +85,16 @@ public class TranslationHistoryAdapter extends RecyclerView.Adapter<TranslationH
             String languageTag = getLanguageTag(history.getSourceLanguage(), history.getTargetLanguage());
             tvLanguageTag.setText(languageTag);
             
-            // 设置源文本和翻译文本
+            // 设置源文本和翻译文本（布局中已设置maxLines=3）
             tvSourceText.setText(history.getSourceText());
             tvTranslatedText.setText(history.getTranslatedText());
+            
+            // 设置时间戳
+            if (tvTimestamp != null) {
+                String formattedTime = TimeFormatUtils.formatTimestamp(history.getTimestamp());
+                tvTimestamp.setText(formattedTime);
+                tvTimestamp.setVisibility(View.VISIBLE);
+            }
         }
         
         private String getLanguageTag(String sourceLang, String targetLang) {

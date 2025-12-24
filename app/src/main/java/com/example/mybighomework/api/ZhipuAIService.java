@@ -33,6 +33,10 @@ public class ZhipuAIService {
     // 默认模型（使用免费的glm-4-flash）
     private static final String DEFAULT_MODEL = "glm-4-flash";
     
+    // 重试配置
+    private static final int DEFAULT_MAX_RETRIES = 2;
+    private static final long RETRY_DELAY_MS = 2000; // 2秒
+    
     // API Key
     private String apiKey;
     
@@ -49,86 +53,150 @@ public class ZhipuAIService {
     }
     
     /**
-     * 批改翻译
+     * 批改翻译（带参考译文和重试机制）
      * @param userTranslation 用户的翻译
      * @param referenceTranslation 参考译文
+     * @param originalText 英文原文
+     * @param maxScore 满分（单道翻译题为3分）
      * @param callback 回调接口
      */
-    public void gradeTranslation(String userTranslation, String referenceTranslation, GradeCallback callback) {
-        String prompt = "你是一位专业的英语老师，请批改以下翻译答案。\n\n" +
+    public void gradeTranslationWithReference(String userTranslation, String referenceTranslation, 
+            String originalText, float maxScore, GradeCallback callback) {
+        String prompt = "你是一位专业的考研英语阅卷老师，请批改以下翻译答案。\n\n" +
+                "【英文原文】\n" + originalText + "\n\n" +
                 "【参考译文】\n" + referenceTranslation + "\n\n" +
                 "【学生译文】\n" + userTranslation + "\n\n" +
-                "请从以下几个维度评分（满分15分）：\n" +
-                "1. 准确性（5分）：译文是否准确表达原文意思\n" +
-                "2. 流畅性（5分）：译文是否通顺自然\n" +
-                "3. 用词（5分）：用词是否恰当、地道\n\n" +
+                "请从以下几个维度评分（满分" + (int)maxScore + "分）：\n" +
+                "1. 准确性（" + String.format("%.1f", maxScore/3) + "分）：译文是否准确表达原文意思，关键词是否翻译正确\n" +
+                "2. 流畅性（" + String.format("%.1f", maxScore/3) + "分）：译文是否通顺自然，符合中文表达习惯\n" +
+                "3. 用词（" + String.format("%.1f", maxScore/3) + "分）：用词是否恰当、地道\n\n" +
                 "请严格按照以下JSON格式输出：\n" +
                 "{\n" +
-                "  \"score\": 分数（0-15之间的数字），\n" +
-                "  \"comment\": \"评语（100字以内，包含优点和不足）\"\n" +
+                "  \"score\": 分数（0-" + (int)maxScore + "之间的数字，可以有小数），\n" +
+                "  \"comment\": \"评语（80字以内，指出优点和需要改进的地方）\"\n" +
                 "}\n\n" +
                 "注意：只输出JSON，不要包含其他文字。";
         
-        chat(prompt, callback);
+        chatWithRetry(prompt, maxScore, callback);
     }
     
     /**
-     * 批改写作
+     * 批改翻译（旧方法，保持兼容）
+     */
+    public void gradeTranslation(String userTranslation, String referenceTranslation, GradeCallback callback) {
+        gradeTranslationWithReference(userTranslation, referenceTranslation, "", 15f, callback);
+    }
+    
+    /**
+     * 批改写作 Part A（应用文，满分10分）
      * @param essay 用户的作文
      * @param topic 作文题目
      * @param callback 回调接口
      */
-    public void gradeWriting(String essay, String topic, GradeCallback callback) {
-        String prompt = "你是一位专业的英语老师，请批改以下英语作文。\n\n" +
+    public void gradeWritingPartA(String essay, String topic, GradeCallback callback) {
+        String prompt = "你是一位专业的考研英语阅卷老师，请批改以下应用文写作（Part A）。\n\n" +
                 "【作文题目】\n" + topic + "\n\n" +
                 "【学生作文】\n" + essay + "\n\n" +
-                "请从以下几个维度评分（满分15分）：\n" +
-                "1. 内容（4分）：是否切题，内容是否充实\n" +
-                "2. 结构（4分）：结构是否清晰，逻辑是否连贯\n" +
-                "3. 语法（4分）：语法是否正确\n" +
-                "4. 词汇（3分）：词汇使用是否恰当、丰富\n\n" +
+                "请从以下几个维度评分（满分10分）：\n" +
+                "1. 格式规范（3分）：是否符合应用文格式要求（称呼、正文、结尾、署名）\n" +
+                "2. 内容完整（4分）：是否完整回应题目要求的所有要点\n" +
+                "3. 语言表达（3分）：语法是否正确，用词是否恰当\n\n" +
                 "请严格按照以下JSON格式输出：\n" +
                 "{\n" +
-                "  \"score\": 分数（0-15之间的数字），\n" +
-                "  \"comment\": \"评语（150字以内，包含各维度的具体评价）\"\n" +
+                "  \"score\": 分数（0-10之间的数字，可以有小数），\n" +
+                "  \"comment\": \"评语（100字以内，包含各维度的具体评价和改进建议）\"\n" +
                 "}\n\n" +
                 "注意：只输出JSON，不要包含其他文字。";
         
-        chat(prompt, callback);
+        chatWithRetry(prompt, 10f, callback);
     }
     
     /**
-     * 发送聊天请求
-     * @param prompt 提示词
+     * 批改写作 Part B（图表作文/议论文，满分15分）
+     * @param essay 用户的作文
+     * @param topic 作文题目
      * @param callback 回调接口
      */
-    private void chat(String prompt, GradeCallback callback) {
+    public void gradeWritingPartB(String essay, String topic, GradeCallback callback) {
+        String prompt = "你是一位专业的考研英语阅卷老师，请批改以下大作文（Part B）。\n\n" +
+                "【作文题目】\n" + topic + "\n\n" +
+                "【学生作文】\n" + essay + "\n\n" +
+                "请从以下几个维度评分（满分15分）：\n" +
+                "1. 内容切题（4分）：是否准确描述图表/图片，是否切合主题\n" +
+                "2. 结构清晰（4分）：段落结构是否合理，逻辑是否连贯\n" +
+                "3. 语法正确（4分）：语法是否正确，句式是否多样\n" +
+                "4. 词汇丰富（3分）：词汇使用是否恰当、丰富、高级\n\n" +
+                "请严格按照以下JSON格式输出：\n" +
+                "{\n" +
+                "  \"score\": 分数（0-15之间的数字，可以有小数），\n" +
+                "  \"comment\": \"评语（120字以内，包含各维度的具体评价和改进建议）\"\n" +
+                "}\n\n" +
+                "注意：只输出JSON，不要包含其他文字。";
+        
+        chatWithRetry(prompt, 15f, callback);
+    }
+    
+    /**
+     * 批改写作（旧方法，保持兼容）
+     */
+    public void gradeWriting(String essay, String topic, GradeCallback callback) {
+        gradeWritingPartB(essay, topic, callback);
+    }
+    
+    /**
+     * 带重试机制的聊天请求
+     * @param prompt 提示词
+     * @param maxScore 满分
+     * @param callback 回调接口
+     */
+    private void chatWithRetry(String prompt, float maxScore, GradeCallback callback) {
         executorService.execute(() -> {
-            try {
-                // 构建请求体
-                JSONObject requestBody = buildRequestBody(prompt);
-                
-                // 发送请求
-                String response = sendRequest(requestBody.toString());
-                
-                // 解析响应
-                String content = parseResponse(response);
-                
-                // 解析评分结果
-                GradeResult result = parseGradeResult(content);
-                
-                // 回调成功
-                if (callback != null) {
-                    callback.onSuccess(result);
-                }
-                
-            } catch (Exception e) {
-                Log.e(TAG, "Grade request failed", e);
-                if (callback != null) {
-                    callback.onError(e.getMessage());
+            Exception lastException = null;
+            
+            for (int attempt = 0; attempt <= DEFAULT_MAX_RETRIES; attempt++) {
+                try {
+                    if (attempt > 0) {
+                        Log.d(TAG, "重试第 " + attempt + " 次...");
+                        Thread.sleep(RETRY_DELAY_MS);
+                    }
+                    
+                    // 构建请求体
+                    JSONObject requestBody = buildRequestBody(prompt);
+                    
+                    // 发送请求
+                    String response = sendRequest(requestBody.toString());
+                    
+                    // 解析响应
+                    String content = parseResponse(response);
+                    
+                    // 解析评分结果
+                    GradeResult result = parseGradeResult(content, maxScore);
+                    
+                    // 回调成功
+                    if (callback != null) {
+                        callback.onSuccess(result);
+                    }
+                    return; // 成功，退出重试循环
+                    
+                } catch (Exception e) {
+                    Log.e(TAG, "批改请求失败 (尝试 " + (attempt + 1) + "/" + (DEFAULT_MAX_RETRIES + 1) + ")", e);
+                    lastException = e;
                 }
             }
+            
+            // 所有重试都失败
+            Log.e(TAG, "所有重试都失败，使用默认评分");
+            if (callback != null) {
+                callback.onError("批改失败: " + (lastException != null ? lastException.getMessage() : "未知错误"));
+            }
         });
+    }
+    
+    /**
+     * 发送聊天请求（旧方法，保持兼容）
+     */
+    private void chat(String prompt, GradeCallback callback) {
+        chatWithRetry(prompt, 15f, callback);
     }
     
     /**
@@ -223,7 +291,7 @@ public class ZhipuAIService {
     /**
      * 解析评分结果
      */
-    private GradeResult parseGradeResult(String content) throws JSONException {
+    private GradeResult parseGradeResult(String content, float maxScore) throws JSONException {
         // 尝试提取JSON部分（AI可能会返回额外的文字）
         String jsonStr = content.trim();
         
@@ -256,9 +324,16 @@ public class ZhipuAIService {
         
         // 确保分数在合理范围内
         if (score < 0) score = 0;
-        if (score > 15) score = 15;
+        if (score > maxScore) score = maxScore;
         
         return new GradeResult(score, comment);
+    }
+    
+    /**
+     * 解析评分结果（旧方法，保持兼容）
+     */
+    private GradeResult parseGradeResult(String content) throws JSONException {
+        return parseGradeResult(content, 15f);
     }
     
     /**

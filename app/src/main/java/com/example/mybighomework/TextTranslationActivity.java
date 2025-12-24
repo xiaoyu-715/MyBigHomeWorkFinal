@@ -32,17 +32,16 @@ import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.mybighomework.adapter.TranslationHistoryAdapter;
+import com.example.mybighomework.api.ZhipuAIService;
 import com.example.mybighomework.database.AppDatabase;
 import com.example.mybighomework.database.dao.TranslationHistoryDao;
 import com.example.mybighomework.database.entity.TranslationHistoryEntity;
-import com.google.android.gms.tasks.OnFailureListener;
-import com.google.android.gms.tasks.OnSuccessListener;
+import com.example.mybighomework.dialog.HistoryDetailDialog;
+import com.example.mybighomework.fragment.HistoryBottomSheetFragment;
+import com.example.mybighomework.repository.TranslationHistoryRepository;
+import com.example.mybighomework.translation.ZhipuTranslationService;
+import com.example.mybighomework.utils.TaskProgressTracker;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
-import com.google.mlkit.common.model.DownloadConditions;
-import com.google.mlkit.nl.translate.TranslateLanguage;
-import com.google.mlkit.nl.translate.Translation;
-import com.google.mlkit.nl.translate.Translator;
-import com.google.mlkit.nl.translate.TranslatorOptions;
 
 import java.util.List;
 
@@ -57,6 +56,7 @@ public class TextTranslationActivity extends AppCompatActivity {
     // UI组件
     private ImageButton btnBack, btnSwitchLanguage, btnClearInput, btnClearHistory, btnCopyResult;
     private TextView tvSourceLanguage, tvTargetLanguage, tvEmptyHistory, tvTranslationResult;
+    private TextView btnViewAllHistory;
     private EditText etInputText;
     private Button btnTranslate;
     private CardView cardTranslationResult;
@@ -66,13 +66,22 @@ public class TextTranslationActivity extends AppCompatActivity {
 
     // 数据相关
     private TranslationHistoryDao historyDao;
+    private TranslationHistoryRepository historyRepository;
     private TranslationHistoryAdapter historyAdapter;
+    
+    // 主页面显示的历史记录数量限制
+    private static final int MAIN_PAGE_HISTORY_LIMIT = 5;
 
-    // ML Kit 翻译器
-    private Translator translator;
-    private String sourceLanguage = TranslateLanguage.ENGLISH;
-    private String targetLanguage = TranslateLanguage.CHINESE;
-    private boolean isModelDownloading = false;
+    // 智谱AI翻译服务
+    private static final String ZHIPU_API_KEY = "e1b0c0c6ee7942908b11119e8fca3efa.w86kmtMVZLXo1vjE";
+    private ZhipuTranslationService translationService;
+    
+    // 语言代码常量
+    private static final String LANG_ENGLISH = "en";
+    private static final String LANG_CHINESE = "zh";
+    
+    private String sourceLanguage = LANG_ENGLISH;
+    private String targetLanguage = LANG_CHINESE;
 
     // 语音识别
     private SpeechRecognizer speechRecognizer;
@@ -93,7 +102,7 @@ public class TextTranslationActivity extends AppCompatActivity {
 
         initViews();
         initDatabase();
-        initTranslator();
+        initTranslationService();
         setupClickListeners();
         loadHistory();
     }
@@ -104,6 +113,7 @@ public class TextTranslationActivity extends AppCompatActivity {
         btnClearInput = findViewById(R.id.btn_clear_input);
         btnClearHistory = findViewById(R.id.btn_clear_history);
         btnCopyResult = findViewById(R.id.btn_copy_result);
+        btnViewAllHistory = findViewById(R.id.btn_view_all_history);
         tvSourceLanguage = findViewById(R.id.tv_source_language);
         tvTargetLanguage = findViewById(R.id.tv_target_language);
         tvEmptyHistory = findViewById(R.id.tv_empty_history);
@@ -126,10 +136,12 @@ public class TextTranslationActivity extends AppCompatActivity {
     private void initDatabase() {
         AppDatabase database = AppDatabase.getInstance(this);
         historyDao = database.translationHistoryDao();
+        historyRepository = new TranslationHistoryRepository(historyDao);
     }
 
-    private void initTranslator() {
-        downloadTranslationModel();
+    private void initTranslationService() {
+        ZhipuAIService aiService = new ZhipuAIService(ZHIPU_API_KEY);
+        translationService = new ZhipuTranslationService(aiService);
     }
 
     private void setupClickListeners() {
@@ -148,57 +160,15 @@ public class TextTranslationActivity extends AppCompatActivity {
 
         btnClearHistory.setOnClickListener(v -> showClearHistoryDialog());
 
+        // 查看全部历史记录按钮
+        btnViewAllHistory.setOnClickListener(v -> showHistoryBottomSheet());
+
         fabVoiceInput.setOnClickListener(v -> requestVoiceInput());
 
-        // 历史记录点击事件
+        // 历史记录点击事件 - 显示详情对话框
         historyAdapter.setOnItemClickListener(history -> {
-            etInputText.setText(history.getSourceText());
-            tvTranslationResult.setText(history.getTranslatedText());
-            cardTranslationResult.setVisibility(View.VISIBLE);
+            showHistoryDetailDialog(history);
         });
-    }
-
-    private void downloadTranslationModel() {
-        if (isModelDownloading) {
-            return;
-        }
-
-        isModelDownloading = true;
-        showProgress(true);
-
-        TranslatorOptions options = new TranslatorOptions.Builder()
-                .setSourceLanguage(sourceLanguage)
-                .setTargetLanguage(targetLanguage)
-                .build();
-
-        if (translator != null) {
-            translator.close();
-        }
-        translator = Translation.getClient(options);
-
-        DownloadConditions conditions = new DownloadConditions.Builder()
-                .requireWifi()
-                .build();
-
-        translator.downloadModelIfNeeded(conditions)
-                .addOnSuccessListener(new OnSuccessListener<Void>() {
-                    @Override
-                    public void onSuccess(Void unused) {
-                        isModelDownloading = false;
-                        showProgress(false);
-                        Log.d(TAG, "翻译模型下载成功");
-                    }
-                })
-                .addOnFailureListener(new OnFailureListener() {
-                    @Override
-                    public void onFailure(@NonNull Exception e) {
-                        isModelDownloading = false;
-                        showProgress(false);
-                        Log.e(TAG, "翻译模型下载失败", e);
-                        Toast.makeText(TextTranslationActivity.this,
-                                "翻译模型下载失败，请检查网络连接", Toast.LENGTH_SHORT).show();
-                    }
-                });
     }
 
     private void switchLanguage() {
@@ -208,7 +178,6 @@ public class TextTranslationActivity extends AppCompatActivity {
         targetLanguage = temp;
 
         updateLanguageDisplay();
-        downloadTranslationModel();
 
         // 清空输入和结果
         etInputText.setText("");
@@ -216,8 +185,8 @@ public class TextTranslationActivity extends AppCompatActivity {
     }
 
     private void updateLanguageDisplay() {
-        String sourceLangText = TranslateLanguage.ENGLISH.equals(sourceLanguage) ? "英文" : "中文";
-        String targetLangText = TranslateLanguage.ENGLISH.equals(targetLanguage) ? "英文" : "中文";
+        String sourceLangText = LANG_ENGLISH.equals(sourceLanguage) ? "英文" : "中文";
+        String targetLangText = LANG_ENGLISH.equals(targetLanguage) ? "英文" : "中文";
         
         tvSourceLanguage.setText(sourceLangText);
         tvTargetLanguage.setText(targetLangText);
@@ -231,8 +200,8 @@ public class TextTranslationActivity extends AppCompatActivity {
             return;
         }
 
-        if (translator == null || isModelDownloading) {
-            Toast.makeText(this, "翻译模型正在下载中，请稍候", Toast.LENGTH_SHORT).show();
+        if (translationService == null) {
+            Toast.makeText(this, "翻译服务未初始化", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -241,24 +210,27 @@ public class TextTranslationActivity extends AppCompatActivity {
 
         showProgress(true);
 
-        translator.translate(processedText)
-                .addOnSuccessListener(new OnSuccessListener<String>() {
+        translationService.translate(processedText, sourceLanguage, targetLanguage, 
+                new ZhipuTranslationService.TranslationCallback() {
                     @Override
                     public void onSuccess(String translatedText) {
-                        showProgress(false);
-                        // 格式化翻译结果
-                        String formattedTranslation = TranslationTextProcessor.formatTranslationResult(translatedText);
-                        displayTranslationResult(formattedTranslation);
-                        saveToHistory(processedText, formattedTranslation);
+                        runOnUiThread(() -> {
+                            showProgress(false);
+                            // 格式化翻译结果
+                            String formattedTranslation = TranslationTextProcessor.formatTranslationResult(translatedText);
+                            displayTranslationResult(formattedTranslation);
+                            saveToHistory(processedText, formattedTranslation);
+                        });
                     }
-                })
-                .addOnFailureListener(new OnFailureListener() {
+
                     @Override
-                    public void onFailure(@NonNull Exception e) {
-                        showProgress(false);
-                        Log.e(TAG, "翻译失败", e);
-                        Toast.makeText(TextTranslationActivity.this,
-                                "翻译失败：" + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    public void onError(String error) {
+                        runOnUiThread(() -> {
+                            showProgress(false);
+                            Log.e(TAG, "翻译失败: " + error);
+                            Toast.makeText(TextTranslationActivity.this,
+                                    error, Toast.LENGTH_SHORT).show();
+                        });
                     }
                 });
     }
@@ -273,7 +245,11 @@ public class TextTranslationActivity extends AppCompatActivity {
             try {
                 TranslationHistoryEntity history = new TranslationHistoryEntity(
                         sourceText, translatedText, sourceLanguage, targetLanguage);
-                historyDao.insert(history);
+                // 使用Repository插入，会自动清理超出限制的旧记录
+                historyRepository.insertHistory(history);
+                
+                // 【智能任务完成跟踪】每完成一次翻译，累计计数，达到目标自动完成任务
+                TaskProgressTracker.getInstance(TextTranslationActivity.this).recordProgress("translation_practice", 1);
                 
                 runOnUiThread(() -> loadHistory());
             } catch (Exception e) {
@@ -285,14 +261,90 @@ public class TextTranslationActivity extends AppCompatActivity {
     private void loadHistory() {
         new Thread(() -> {
             try {
-                List<TranslationHistoryEntity> historyList = historyDao.getRecent(50);
+                // 主页面只显示最近的几条记录
+                List<TranslationHistoryEntity> historyList = historyRepository.getRecentHistory(MAIN_PAGE_HISTORY_LIMIT);
+                int totalCount = historyRepository.getTotalCount();
+                
                 runOnUiThread(() -> {
                     historyAdapter.setHistoryList(historyList);
                     tvEmptyHistory.setVisibility(historyList.isEmpty() ? View.VISIBLE : View.GONE);
                     rvHistory.setVisibility(historyList.isEmpty() ? View.GONE : View.VISIBLE);
+                    // 根据总数量决定是否显示"查看全部"按钮
+                    btnViewAllHistory.setVisibility(totalCount > MAIN_PAGE_HISTORY_LIMIT ? View.VISIBLE : View.GONE);
                 });
             } catch (Exception e) {
                 Log.e(TAG, "加载历史记录失败", e);
+            }
+        }).start();
+    }
+    
+    /**
+     * 显示历史记录底部弹出面板
+     */
+    private void showHistoryBottomSheet() {
+        HistoryBottomSheetFragment bottomSheet = HistoryBottomSheetFragment.newInstance();
+        bottomSheet.setOnHistorySelectedListener(history -> {
+            // 恢复语言方向
+            sourceLanguage = history.getSourceLanguage();
+            targetLanguage = history.getTargetLanguage();
+            updateLanguageDisplay();
+            
+            // 填充输入和结果
+            etInputText.setText(history.getSourceText());
+            tvTranslationResult.setText(history.getTranslatedText());
+            cardTranslationResult.setVisibility(View.VISIBLE);
+        });
+        bottomSheet.show(getSupportFragmentManager(), "HistoryBottomSheet");
+    }
+    
+    /**
+     * 显示历史记录详情对话框
+     * @param history 历史记录实体
+     */
+    private void showHistoryDetailDialog(TranslationHistoryEntity history) {
+        HistoryDetailDialog dialog = HistoryDetailDialog.newInstance(history);
+        dialog.setOnHistoryActionListener(new HistoryDetailDialog.OnHistoryActionListener() {
+            @Override
+            public void onUseHistory(TranslationHistoryEntity selectedHistory) {
+                // 恢复语言方向
+                sourceLanguage = selectedHistory.getSourceLanguage();
+                targetLanguage = selectedHistory.getTargetLanguage();
+                updateLanguageDisplay();
+                
+                // 填充输入和结果
+                etInputText.setText(selectedHistory.getSourceText());
+                tvTranslationResult.setText(selectedHistory.getTranslatedText());
+                cardTranslationResult.setVisibility(View.VISIBLE);
+            }
+
+            @Override
+            public void onDeleteHistory(int historyId) {
+                // 删除历史记录
+                deleteHistoryById(historyId);
+            }
+        });
+        dialog.show(getSupportFragmentManager(), "HistoryDetailDialog");
+    }
+    
+    /**
+     * 根据ID删除历史记录
+     * @param historyId 历史记录ID
+     */
+    private void deleteHistoryById(int historyId) {
+        new Thread(() -> {
+            try {
+                historyRepository.deleteHistory(historyId);
+                runOnUiThread(() -> {
+                    loadHistory();
+                    Toast.makeText(TextTranslationActivity.this,
+                            "已删除", Toast.LENGTH_SHORT).show();
+                });
+            } catch (Exception e) {
+                Log.e(TAG, "删除历史记录失败", e);
+                runOnUiThread(() -> {
+                    Toast.makeText(TextTranslationActivity.this,
+                            "删除失败", Toast.LENGTH_SHORT).show();
+                });
             }
         }).start();
     }
@@ -319,7 +371,7 @@ public class TextTranslationActivity extends AppCompatActivity {
     private void clearHistory() {
         new Thread(() -> {
             try {
-                historyDao.deleteAll();
+                historyRepository.deleteAllHistory();
                 runOnUiThread(() -> {
                     loadHistory();
                     Toast.makeText(TextTranslationActivity.this,
@@ -428,7 +480,7 @@ public class TextTranslationActivity extends AppCompatActivity {
                         RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
 
                 // 根据当前源语言设置识别语言
-                String languageCode = TranslateLanguage.ENGLISH.equals(sourceLanguage)
+                String languageCode = LANG_ENGLISH.equals(sourceLanguage)
                         ? "en-US" : "zh-CN";
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageCode);
                 intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE_PREFERENCE, languageCode);
@@ -458,7 +510,7 @@ public class TextTranslationActivity extends AppCompatActivity {
                     RecognizerIntent.LANGUAGE_MODEL_FREE_FORM);
 
             // 根据当前源语言设置识别语言
-            String languageCode = TranslateLanguage.ENGLISH.equals(sourceLanguage)
+            String languageCode = LANG_ENGLISH.equals(sourceLanguage)
                     ? "en-US" : "zh-CN";
             intent.putExtra(RecognizerIntent.EXTRA_LANGUAGE, languageCode);
             intent.putExtra(RecognizerIntent.EXTRA_PROMPT, "请开始说话...");
@@ -528,9 +580,10 @@ public class TextTranslationActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if (translator != null) {
-            translator.close();
-            translator = null;
+        // 关闭翻译服务，释放线程池资源
+        if (translationService != null) {
+            translationService.shutdown();
+            translationService = null;
         }
         if (speechRecognizer != null) {
             speechRecognizer.destroy();

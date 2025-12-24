@@ -165,7 +165,7 @@ public class ExamResultActivity extends AppCompatActivity {
         tvTranslationComment.setText(result.getTranslationComment() != null ? 
             result.getTranslationComment() : "无评语");
         
-        tvWritingScore.setText(String.format(Locale.getDefault(), "%.1f/15", result.getWritingScore()));
+        tvWritingScore.setText(String.format(Locale.getDefault(), "%.1f/25", result.getWritingScore()));
         tvWritingComment.setText(result.getWritingComment() != null ? 
             result.getWritingComment() : "无评语");
     }

@@ -12,12 +12,14 @@ import androidx.sqlite.db.SupportSQLiteDatabase;
 import com.example.mybighomework.database.converter.DateConverter;
 import com.example.mybighomework.database.converter.StringArrayConverter;
 import com.example.mybighomework.database.dao.DailySentenceDao;
+import com.example.mybighomework.database.dao.DailyTaskDao;
 import com.example.mybighomework.database.dao.ExamAnswerDao;
 import com.example.mybighomework.database.dao.ExamDao;
 import com.example.mybighomework.database.dao.ExamProgressDao;
 import com.example.mybighomework.database.dao.ExamResultDao;
 import com.example.mybighomework.database.dao.QuestionDao;
 import com.example.mybighomework.database.dao.QuestionNoteDao;
+import com.example.mybighomework.database.dao.StudyPhaseDao;
 import com.example.mybighomework.database.dao.StudyPlanDao;
 import com.example.mybighomework.database.dao.StudyRecordDao;
 import com.example.mybighomework.database.dao.TranslationHistoryDao;
@@ -26,12 +28,17 @@ import com.example.mybighomework.database.dao.UserSettingsDao;
 import com.example.mybighomework.database.dao.VocabularyDao;
 import com.example.mybighomework.database.dao.WrongQuestionDao;
 import com.example.mybighomework.database.entity.DailySentenceEntity;
+import com.example.mybighomework.database.entity.DailyTaskEntity;
+
+import java.util.List;
+import com.example.mybighomework.database.entity.DailyTaskEntity;
 import com.example.mybighomework.database.entity.ExamAnswerEntity;
 import com.example.mybighomework.database.entity.ExamProgressEntity;
 import com.example.mybighomework.database.entity.ExamRecordEntity;
 import com.example.mybighomework.database.entity.ExamResultEntity;
 import com.example.mybighomework.database.entity.QuestionEntity;
 import com.example.mybighomework.database.entity.QuestionNoteEntity;
+import com.example.mybighomework.database.entity.StudyPhaseEntity;
 import com.example.mybighomework.database.entity.StudyPlanEntity;
 import com.example.mybighomework.database.entity.StudyRecordEntity;
 import com.example.mybighomework.database.entity.TranslationHistoryEntity;
@@ -43,6 +50,8 @@ import com.example.mybighomework.database.entity.WrongQuestionEntity;
 @Database(
     entities = {
         StudyPlanEntity.class,
+        StudyPhaseEntity.class,
+        DailyTaskEntity.class,
         VocabularyRecordEntity.class,
         ExamRecordEntity.class,
         UserSettingsEntity.class,
@@ -57,51 +66,37 @@ import com.example.mybighomework.database.entity.WrongQuestionEntity;
         QuestionNoteEntity.class,
         ExamResultEntity.class
     },
-    version = 14,  // 更新版本号（添加vocabularyCorrectCount字段）
+    version = 19,
     exportSchema = false
 )
 @TypeConverters({DateConverter.class, StringArrayConverter.class})
 public abstract class AppDatabase extends RoomDatabase {
-    
+
     private static volatile AppDatabase INSTANCE;
     private static final String DATABASE_NAME = "english_learning_db";
-    
-    /**
-     * 数据库迁移：版本8到版本9
-     * 添加totalStudyTime字段到user_settings表，用于统一存储所有学习活动的时长
-     */
+
+    // 数据库迁移：版本8到9，添加 totalStudyTime
     static final Migration MIGRATION_8_9 = new Migration(8, 9) {
         @Override
         public void migrate(SupportSQLiteDatabase database) {
-            // 添加totalStudyTime字段（默认值为0）
             database.execSQL("ALTER TABLE user_settings ADD COLUMN totalStudyTime INTEGER NOT NULL DEFAULT 0");
         }
     };
-    
-    /**
-     * 数据库迁移：版本9到版本10
-     * 添加audioUrl, imageUrl, sid字段到daily_sentences表，用于支持金山词霸API数据
-     */
+
+    // 数据库迁移：版本9到10，添加每日一句扩展字段
     static final Migration MIGRATION_9_10 = new Migration(9, 10) {
         @Override
         public void migrate(SupportSQLiteDatabase database) {
-            // 添加audioUrl字段（音频URL）
             database.execSQL("ALTER TABLE daily_sentences ADD COLUMN audioUrl TEXT");
-            // 添加imageUrl字段（图片URL）
             database.execSQL("ALTER TABLE daily_sentences ADD COLUMN imageUrl TEXT");
-            // 添加sid字段（句子ID）
             database.execSQL("ALTER TABLE daily_sentences ADD COLUMN sid TEXT");
         }
     };
-    
-    /**
-     * 数据库迁移：版本10到版本11
-     * 添加exam_progress表，用于保存考试进度支持暂停和继续
-     */
+
+    // 版本10到11：考试进度表
     static final Migration MIGRATION_10_11 = new Migration(10, 11) {
         @Override
         public void migrate(SupportSQLiteDatabase database) {
-            // 创建exam_progress表
             database.execSQL("CREATE TABLE IF NOT EXISTS exam_progress (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
                 "examType TEXT, " +
@@ -114,15 +109,11 @@ public abstract class AppDatabase extends RoomDatabase {
                 "isCompleted INTEGER NOT NULL DEFAULT 0)");
         }
     };
-    
-    /**
-     * 数据库迁移：版本11到版本12
-     * 添加question_notes表，用于保存题目笔记
-     */
+
+    // 版本11到12：题目笔记表
     static final Migration MIGRATION_11_12 = new Migration(11, 12) {
         @Override
         public void migrate(SupportSQLiteDatabase database) {
-            // 创建question_notes表
             database.execSQL("CREATE TABLE IF NOT EXISTS question_notes (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
                 "exam_title TEXT, " +
@@ -132,15 +123,11 @@ public abstract class AppDatabase extends RoomDatabase {
                 "update_time INTEGER)");
         }
     };
-    
-    /**
-     * 数据库迁移：版本12到版本13
-     * 添加exam_results表，用于保存考试成绩
-     */
+
+    // 版本12到13：考试成绩表
     static final Migration MIGRATION_12_13 = new Migration(12, 13) {
         @Override
         public void migrate(SupportSQLiteDatabase database) {
-            // 创建exam_results表
             database.execSQL("CREATE TABLE IF NOT EXISTS exam_results (" +
                 "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
                 "examTitle TEXT, " +
@@ -169,18 +156,217 @@ public abstract class AppDatabase extends RoomDatabase {
                 "grade TEXT)");
         }
     };
-    
-    /**
-     * 数据库迁移：版本13到版本14
-     * 添加vocabularyCorrectCount字段到user_settings表，用于记录词汇训练答对次数
-     */
+
+    // 版本13到14：词汇正确次数
     static final Migration MIGRATION_13_14 = new Migration(13, 14) {
         @Override
         public void migrate(SupportSQLiteDatabase database) {
             database.execSQL("ALTER TABLE user_settings ADD COLUMN vocabularyCorrectCount INTEGER NOT NULL DEFAULT 0");
         }
     };
+
+    // 版本14到15：学习计划字段扩展
+    static final Migration MIGRATION_14_15 = new Migration(14, 15) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE study_plans ADD COLUMN summary TEXT");
+            database.execSQL("ALTER TABLE study_plans ADD COLUMN totalDays INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE study_plans ADD COLUMN completedDays INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE study_plans ADD COLUMN streakDays INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE study_plans ADD COLUMN totalStudyTime INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE study_plans ADD COLUMN isAiGenerated INTEGER NOT NULL DEFAULT 0");
+            database.execSQL("ALTER TABLE study_plans ADD COLUMN dailyMinutes INTEGER NOT NULL DEFAULT 0");
+        }
+    };
+
+    // 版本15到16：阶段与每日任务表
+    static final Migration MIGRATION_15_16 = new Migration(15, 16) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("CREATE TABLE IF NOT EXISTS study_phases (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "planId INTEGER NOT NULL, " +
+                "phaseOrder INTEGER NOT NULL, " +
+                "phaseName TEXT, " +
+                "goal TEXT, " +
+                "durationDays INTEGER NOT NULL, " +
+                "taskTemplateJson TEXT, " +
+                "completedDays INTEGER NOT NULL DEFAULT 0, " +
+                "progress INTEGER NOT NULL DEFAULT 0, " +
+                "status TEXT, " +
+                "startDate TEXT, " +
+                "endDate TEXT, " +
+                "FOREIGN KEY(planId) REFERENCES study_plans(id) ON DELETE CASCADE)");
+
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_study_phases_planId ON study_phases(planId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_study_phases_planId_phaseOrder ON study_phases(planId, phaseOrder)");
+
+            database.execSQL("CREATE TABLE IF NOT EXISTS daily_tasks (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "planId INTEGER NOT NULL, " +
+                "phaseId INTEGER NOT NULL, " +
+                "date TEXT, " +
+                "taskContent TEXT, " +
+                "estimatedMinutes INTEGER NOT NULL DEFAULT 0, " +
+                "actualMinutes INTEGER NOT NULL DEFAULT 0, " +
+                "isCompleted INTEGER NOT NULL DEFAULT 0, " +
+                "completedAt INTEGER NOT NULL DEFAULT 0, " +
+                "taskOrder INTEGER NOT NULL DEFAULT 0, " +
+                "FOREIGN KEY(planId) REFERENCES study_plans(id) ON DELETE CASCADE, " +
+                "FOREIGN KEY(phaseId) REFERENCES study_phases(id) ON DELETE CASCADE)");
+
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_daily_tasks_planId ON daily_tasks(planId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_daily_tasks_phaseId ON daily_tasks(phaseId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_daily_tasks_planId_date ON daily_tasks(planId, date)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_daily_tasks_planId_date_taskOrder ON daily_tasks(planId, date, taskOrder)");
+        }
+    };
+
+    // 版本16到17：补救性迁移，确保字段与表存在
+    static final Migration MIGRATION_16_17 = new Migration(16, 17) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            try {
+                database.execSQL("ALTER TABLE study_plans ADD COLUMN summary TEXT");
+            } catch (Exception ignored) {}
+            try {
+                database.execSQL("ALTER TABLE study_plans ADD COLUMN totalDays INTEGER NOT NULL DEFAULT 0");
+            } catch (Exception ignored) {}
+            try {
+                database.execSQL("ALTER TABLE study_plans ADD COLUMN completedDays INTEGER NOT NULL DEFAULT 0");
+            } catch (Exception ignored) {}
+            try {
+                database.execSQL("ALTER TABLE study_plans ADD COLUMN streakDays INTEGER NOT NULL DEFAULT 0");
+            } catch (Exception ignored) {}
+            try {
+                database.execSQL("ALTER TABLE study_plans ADD COLUMN totalStudyTime INTEGER NOT NULL DEFAULT 0");
+            } catch (Exception ignored) {}
+            try {
+                database.execSQL("ALTER TABLE study_plans ADD COLUMN isAiGenerated INTEGER NOT NULL DEFAULT 0");
+            } catch (Exception ignored) {}
+            try {
+                database.execSQL("ALTER TABLE study_plans ADD COLUMN dailyMinutes INTEGER NOT NULL DEFAULT 0");
+            } catch (Exception ignored) {}
+
+            database.execSQL("CREATE TABLE IF NOT EXISTS study_phases (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "planId INTEGER NOT NULL, " +
+                "phaseOrder INTEGER NOT NULL, " +
+                "phaseName TEXT, " +
+                "goal TEXT, " +
+                "durationDays INTEGER NOT NULL, " +
+                "taskTemplateJson TEXT, " +
+                "completedDays INTEGER NOT NULL DEFAULT 0, " +
+                "progress INTEGER NOT NULL DEFAULT 0, " +
+                "status TEXT, " +
+                "startDate TEXT, " +
+                "endDate TEXT, " +
+                "FOREIGN KEY(planId) REFERENCES study_plans(id) ON DELETE CASCADE)");
+
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_study_phases_planId ON study_phases(planId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_study_phases_planId_phaseOrder ON study_phases(planId, phaseOrder)");
+
+            database.execSQL("CREATE TABLE IF NOT EXISTS daily_tasks (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "planId INTEGER NOT NULL, " +
+                "phaseId INTEGER NOT NULL, " +
+                "date TEXT, " +
+                "taskContent TEXT, " +
+                "estimatedMinutes INTEGER NOT NULL DEFAULT 0, " +
+                "actualMinutes INTEGER NOT NULL DEFAULT 0, " +
+                "isCompleted INTEGER NOT NULL DEFAULT 0, " +
+                "completedAt INTEGER NOT NULL DEFAULT 0, " +
+                "taskOrder INTEGER NOT NULL DEFAULT 0, " +
+                "FOREIGN KEY(planId) REFERENCES study_plans(id) ON DELETE CASCADE, " +
+                "FOREIGN KEY(phaseId) REFERENCES study_phases(id) ON DELETE CASCADE)");
+
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_daily_tasks_planId ON daily_tasks(planId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_daily_tasks_phaseId ON daily_tasks(phaseId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_daily_tasks_planId_date ON daily_tasks(planId, date)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_daily_tasks_planId_date_taskOrder ON daily_tasks(planId, date, taskOrder)");
+        }
+    };
+
+    // 版本17到18：为daily_tasks表添加actionType字段
+    static final Migration MIGRATION_17_18 = new Migration(17, 18) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE daily_tasks ADD COLUMN actionType TEXT");
+        }
+    };
+
+    // 版本18到19：为daily_tasks表添加任务完成条件字段
+    static final Migration MIGRATION_18_19 = new Migration(18, 19) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE daily_tasks ADD COLUMN completionType TEXT DEFAULT 'simple'");
+            database.execSQL("ALTER TABLE daily_tasks ADD COLUMN completionTarget INTEGER NOT NULL DEFAULT 1");
+            database.execSQL("ALTER TABLE daily_tasks ADD COLUMN currentProgress INTEGER NOT NULL DEFAULT 0");
+        }
+    };
     
+    /**
+     * 修复旧任务的actionType字段
+     * 对于actionType为空的任务，根据任务内容智能推断
+     */
+    public static void fixOldTasksActionType(Context context) {
+        new Thread(() -> {
+            try {
+                android.util.Log.d("AppDatabase", "========== 开始修复旧任务 ==========");
+                AppDatabase db = getInstance(context);
+                DailyTaskDao taskDao = db.dailyTaskDao();
+                
+                // 获取所有actionType为空的任务
+                List<DailyTaskEntity> tasks = taskDao.getTasksWithEmptyActionType();
+                
+                if (tasks == null || tasks.isEmpty()) {
+                    android.util.Log.d("AppDatabase", "✓ 没有需要修复的旧任务（所有任务都有actionType）");
+                    return;
+                }
+                
+                android.util.Log.d("AppDatabase", "发现 " + tasks.size() + " 个需要修复的任务");
+                
+                int fixedCount = 0;
+                for (DailyTaskEntity task : tasks) {
+                    String content = task.getTaskContent();
+                    if (content == null || content.isEmpty()) {
+                        android.util.Log.w("AppDatabase", "跳过空内容任务 id=" + task.getId());
+                        continue;
+                    }
+                    
+                    // 使用ActionTypeInferrer推断actionType
+                    String actionType = com.example.mybighomework.utils.ActionTypeInferrer.inferActionType(content);
+                    if (actionType == null) {
+                        android.util.Log.w("AppDatabase", "无法推断actionType: " + content);
+                        continue;
+                    }
+                    
+                    task.setActionType(actionType);
+                    
+                    // 解析完成条件
+                    com.example.mybighomework.utils.CompletionConditionParser.CompletionCondition condition = 
+                        com.example.mybighomework.utils.CompletionConditionParser.parse(content);
+                    
+                    if (task.getCompletionType() == null || task.getCompletionType().isEmpty()) {
+                        task.setCompletionType(condition.type);
+                    }
+                    if (task.getCompletionTarget() <= 0) {
+                        task.setCompletionTarget(condition.target);
+                    }
+                    
+                    taskDao.update(task);
+                    fixedCount++;
+                    android.util.Log.d("AppDatabase", "✓ 修复任务[" + task.getId() + "]: " + content + 
+                        " -> actionType=" + actionType + ", type=" + condition.type + ", target=" + condition.target);
+                }
+                
+                android.util.Log.d("AppDatabase", "========== 修复完成: " + fixedCount + "/" + tasks.size() + " ==========");
+            } catch (Exception e) {
+                android.util.Log.e("AppDatabase", "修复旧任务失败", e);
+            }
+        }).start();
+    }
+
     public abstract StudyPlanDao studyPlanDao();
     public abstract VocabularyDao vocabularyDao();
     public abstract ExamDao examDao();
@@ -195,7 +381,9 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract ExamProgressDao examProgressDao();
     public abstract QuestionNoteDao questionNoteDao();
     public abstract ExamResultDao examResultDao();
-    
+    public abstract StudyPhaseDao studyPhaseDao();
+    public abstract DailyTaskDao dailyTaskDao();
+
     public static AppDatabase getInstance(Context context) {
         if (INSTANCE == null) {
             synchronized (AppDatabase.class) {
@@ -205,19 +393,28 @@ public abstract class AppDatabase extends RoomDatabase {
                         AppDatabase.class,
                         DATABASE_NAME
                     )
-                    // 已移除 allowMainThreadQueries()，所有数据库操作必须在后台线程
-                    .addMigrations(MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
-                    .fallbackToDestructiveMigration()
+                    .addMigrations(
+                        MIGRATION_8_9,
+                        MIGRATION_9_10,
+                        MIGRATION_10_11,
+                        MIGRATION_11_12,
+                        MIGRATION_12_13,
+                        MIGRATION_13_14,
+                        MIGRATION_14_15,
+                        MIGRATION_15_16,
+                        MIGRATION_16_17,
+                        MIGRATION_17_18,
+                        MIGRATION_18_19
+                    )
                     .build();
-                    
-                    // 在后台线程初始化默认用户设置
+
                     initializeDefaultSettingsAsync(INSTANCE);
                 }
             }
         }
         return INSTANCE;
     }
-    
+
     private static void initializeDefaultSettingsAsync(AppDatabase database) {
         new Thread(() -> {
             try {
@@ -231,7 +428,7 @@ public abstract class AppDatabase extends RoomDatabase {
             }
         }).start();
     }
-    
+
     public static void destroyInstance() {
         INSTANCE = null;
     }

@@ -21,6 +21,12 @@
     <!-- 录音权限（语音输入功能需要） -->
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
+    <!-- AutoGLM自动化功能所需权限 -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES"
+        tools:ignore="QueryAllPackagesPermission" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+
 
     <application
         android:name=".MyApplication"
@@ -98,9 +104,9 @@
             android:name=".CameraTranslationActivity"
             android:exported="false" />
         <activity
-            android:name=".DeepSeekChatActivity"
+            android:name=".AIChatActivity"
             android:exported="false"
-            android:windowSoftInputMode="adjustPan|stateHidden" />
+            android:windowSoftInputMode="adjustResize|stateHidden" />
         <activity
             android:name=".TextTranslationActivity"
             android:exported="false"
@@ -120,6 +126,29 @@
             android:exported="false"
             android:label="考试成绩"
             android:screenOrientation="portrait" />
+        <activity
+            android:name=".PlanDetailActivity"
+            android:exported="false"
+            android:label="计划详情"
+            android:screenOrientation="portrait" />
+        <activity
+            android:name=".autoglm.ui.AIAssistantActivity"
+            android:exported="false"
+            android:label="AI学习助手"
+            android:windowSoftInputMode="adjustResize" />
+        
+        <!-- AutoGLM 无障碍服务 -->
+        <service
+            android:name=".autoglm.automation.AutomationAccessibilityService"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/accessibility_service_config" />
+        </service>
         
         <!-- FileProvider for sharing images -->
         <provider

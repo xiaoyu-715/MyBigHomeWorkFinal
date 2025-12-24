@@ -16,41 +16,64 @@
         android:orientation="vertical"
         android:padding="12dp">
 
-        <!-- 语言标签 -->
-        <TextView
-            android:id="@+id/tv_language_tag"
-            android:layout_width="wrap_content"
+        <!-- 顶部行：语言标签和时间戳 -->
+        <LinearLayout
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginBottom="4dp"
-            android:background="@drawable/bg_task_progress"
-            android:paddingHorizontal="8dp"
-            android:paddingVertical="2dp"
-            android:text="英中"
-            android:textColor="@color/primary_blue"
-            android:textSize="10sp"
-            android:textStyle="bold" />
+            android:gravity="center_vertical"
+            android:orientation="horizontal">
 
-        <!-- 源文本 -->
+            <!-- 语言标签 -->
+            <TextView
+                android:id="@+id/tv_language_tag"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_task_progress"
+                android:paddingHorizontal="8dp"
+                android:paddingVertical="2dp"
+                android:text="英中"
+                android:textColor="@color/primary_blue"
+                android:textSize="10sp"
+                android:textStyle="bold" />
+
+            <View
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1" />
+
+            <!-- 时间戳 -->
+            <TextView
+                android:id="@+id/tv_timestamp"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="今天 14:30"
+                android:textColor="@color/text_hint"
+                android:textSize="12sp" />
+
+        </LinearLayout>
+
+        <!-- 源文本 - 最多3行 -->
         <TextView
             android:id="@+id/tv_source_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:ellipsize="end"
-            android:maxLines="2"
+            android:maxLines="3"
             android:text="Hello World"
             android:textColor="@color/text_primary"
             android:textSize="16sp"
             android:textStyle="bold" />
 
-        <!-- 翻译文本 -->
+        <!-- 翻译文本 - 最多3行 -->
         <TextView
             android:id="@+id/tv_translated_text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
             android:ellipsize="end"
-            android:maxLines="2"
+            android:maxLines="3"
             android:text="你好世界"
             android:textColor="@color/text_secondary"
             android:textSize="14sp" />

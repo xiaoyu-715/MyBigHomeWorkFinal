@@ -5,6 +5,8 @@ import android.util.Log;
 
 import com.example.mybighomework.StudyPlan;
 import com.example.mybighomework.api.ZhipuAIService;
+import com.example.mybighomework.database.entity.StudyPlanEntity;
+import com.example.mybighomework.database.entity.StudyPhaseEntity;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -623,6 +625,281 @@ public class StudyPlanExtractor {
      */
     public interface OnProgressUpdateListener {
         void onProgressUpdate(String message, int progress);
+    }
+    
+    // ========== 结构化学习计划提取方法（Requirements: 2.1, 2.2） ==========
+    
+    /**
+     * 结构化学习计划提取结果
+     * 包含计划实体、阶段列表和任务模板
+     */
+    public static class StructuredPlanResult {
+        public StudyPlanEntity plan;
+        public List<StudyPhaseEntity> phases;
+        public List<List<StructuredPlanParser.TaskTemplate>> taskTemplates;
+        
+        public StructuredPlanResult(StudyPlanEntity plan, 
+                                   List<StudyPhaseEntity> phases,
+                                   List<List<StructuredPlanParser.TaskTemplate>> taskTemplates) {
+            this.plan = plan;
+            this.phases = phases;
+            this.taskTemplates = taskTemplates;
+        }
+    }
+    
+    /**
+     * 结构化学习计划提取回调接口
+     */
+    public interface OnStructuredPlanExtractedListener {
+        void onSuccess(StructuredPlanResult result);
+        void onError(String error);
+    }
+    
+    /**
+     * 从对话内容中提取结构化学习计划
+     * 使用StructuredPlanPromptBuilder构建Prompt
+     * 使用StructuredPlanParser解析响应
+     * 返回包含阶段和任务的完整计划数据
+     * 
+     * @param conversationContext 对话上下文
+     * @param callback 回调接口
+     * 
+     * Requirements: 2.1, 2.2
+     */
+    public void extractStructuredPlan(String conversationContext, 
+                                      OnStructuredPlanExtractedListener callback) {
+        extractStructuredPlan(conversationContext, callback, null);
+    }
+    
+    /**
+     * 从对话内容中提取结构化学习计划（带进度回调）
+     * 使用StructuredPlanPromptBuilder构建Prompt
+     * 使用StructuredPlanParser解析响应
+     * 返回包含阶段和任务的完整计划数据
+     * 
+     * @param conversationContext 对话上下文
+     * @param callback 回调接口
+     * @param progressListener 进度监听器
+     * 
+     * Requirements: 2.1, 2.2
+     */
+    public void extractStructuredPlan(String conversationContext, 
+                                      OnStructuredPlanExtractedListener callback,
+                                      OnProgressUpdateListener progressListener) {
+        if (apiService == null) {
+            if (callback != null) {
+                callback.onError("API服务未初始化");
+            }
+            return;
+        }
+        
+        // 步骤1: 使用StructuredPlanPromptBuilder构建Prompt
+        if (progressListener != null) {
+            progressListener.onProgressUpdate("正在分析对话内容...", 10);
+        }
+        
+        // 创建结构化Prompt构建器
+        StructuredPlanPromptBuilder promptBuilder = new StructuredPlanPromptBuilder(context);
+        String structuredPrompt = promptBuilder.buildPrompt(conversationContext);
+        
+        Log.d(TAG, "构建的结构化Prompt长度: " + structuredPrompt.length());
+        
+        if (progressListener != null) {
+            progressListener.onProgressUpdate("正在构建学习计划请求...", 30);
+        }
+        
+        // 构建消息列表
+        List<ZhipuAIService.ChatMessage> messages = new ArrayList<>();
+        messages.add(new ZhipuAIService.ChatMessage("system", 
+            "你是一个专业的学习计划制定助手，擅长根据学生的需求制定详细、结构化、可执行的学习计划。" +
+            "请严格按照JSON格式返回计划数据，包含阶段划分和每日任务模板。"));
+        messages.add(new ZhipuAIService.ChatMessage("user", structuredPrompt));
+        
+        // 步骤2: 调用API生成
+        if (progressListener != null) {
+            progressListener.onProgressUpdate("正在生成结构化学习计划...", 40);
+        }
+        
+        // 调用API
+        apiService.chat(messages, new ZhipuAIService.ChatCallback() {
+            @Override
+            public void onSuccess(String response) {
+                try {
+                    // 步骤3: 使用StructuredPlanParser解析响应
+                    if (progressListener != null) {
+                        progressListener.onProgressUpdate("正在解析计划数据...", 80);
+                    }
+                    
+                    Log.d(TAG, "AI响应内容: " + response);
+                    
+                    // 创建结构化解析器
+                    StructuredPlanParser parser = new StructuredPlanParser();
+                    StructuredPlanParser.ParseResult parseResult = parser.parseResponse(response);
+                    
+                    if (!parseResult.success) {
+                        Log.e(TAG, "解析失败: " + parseResult.errorMessage);
+                        if (callback != null) {
+                            callback.onError("解析失败：" + parseResult.errorMessage);
+                        }
+                        return;
+                    }
+                    
+                    if (progressListener != null) {
+                        progressListener.onProgressUpdate("生成完成！", 100);
+                    }
+                    
+                    // 构建结果
+                    StructuredPlanResult result = new StructuredPlanResult(
+                        parseResult.plan,
+                        parseResult.phases,
+                        parseResult.taskTemplates
+                    );
+                    
+                    Log.d(TAG, "成功解析结构化计划: " + parseResult.plan.getTitle() + 
+                          ", 阶段数: " + parseResult.phases.size());
+                    
+                    if (callback != null) {
+                        callback.onSuccess(result);
+                    }
+                    
+                } catch (Exception e) {
+                    Log.e(TAG, "解析结构化学习计划失败", e);
+                    if (callback != null) {
+                        callback.onError("解析失败：" + e.getMessage());
+                    }
+                }
+            }
+            
+            @Override
+            public void onError(String error) {
+                Log.e(TAG, "API调用失败: " + error);
+                if (callback != null) {
+                    callback.onError(error);
+                }
+            }
+        });
+    }
+    
+    /**
+     * 从对话内容中提取结构化学习计划（同时返回传统格式和结构化格式）
+     * 这个方法用于兼容现有代码，同时支持新的结构化计划
+     * 
+     * @param conversationContext 对话上下文
+     * @param legacyCallback 传统格式回调（返回List<StudyPlan>）
+     * @param structuredCallback 结构化格式回调（返回StructuredPlanResult）
+     * @param progressListener 进度监听器
+     * 
+     * Requirements: 2.1, 2.2
+     */
+    public void extractPlansWithStructuredData(String conversationContext,
+                                               OnPlanExtractedListener legacyCallback,
+                                               OnStructuredPlanExtractedListener structuredCallback,
+                                               OnProgressUpdateListener progressListener) {
+        // 使用结构化提取方法
+        extractStructuredPlan(conversationContext, new OnStructuredPlanExtractedListener() {
+            @Override
+            public void onSuccess(StructuredPlanResult result) {
+                // 转换为传统格式
+                if (legacyCallback != null) {
+                    List<StudyPlan> legacyPlans = convertToLegacyFormat(result);
+                    legacyCallback.onSuccess(legacyPlans);
+                }
+                
+                // 同时返回结构化格式
+                if (structuredCallback != null) {
+                    structuredCallback.onSuccess(result);
+                }
+            }
+            
+            @Override
+            public void onError(String error) {
+                if (legacyCallback != null) {
+                    legacyCallback.onError(error);
+                }
+                if (structuredCallback != null) {
+                    structuredCallback.onError(error);
+                }
+            }
+        }, progressListener);
+    }
+    
+    /**
+     * 将结构化计划结果转换为传统的StudyPlan格式
+     * 用于兼容现有代码
+     * 同时填充阶段预览信息用于对话框显示
+     */
+    private List<StudyPlan> convertToLegacyFormat(StructuredPlanResult result) {
+        List<StudyPlan> plans = new ArrayList<>();
+        
+        if (result == null || result.plan == null) {
+            return plans;
+        }
+        
+        StudyPlanEntity entity = result.plan;
+        
+        // 构建描述信息，包含阶段概览
+        StringBuilder description = new StringBuilder();
+        if (entity.getSummary() != null && !entity.getSummary().isEmpty()) {
+            description.append(entity.getSummary()).append("\n\n");
+        }
+        
+        // 添加阶段信息到描述
+        if (result.phases != null && !result.phases.isEmpty()) {
+            description.append("【学习阶段】\n");
+            for (StudyPhaseEntity phase : result.phases) {
+                description.append("• ").append(phase.getPhaseName());
+                description.append("（").append(phase.getDurationDays()).append("天）");
+                if (phase.getGoal() != null && !phase.getGoal().isEmpty()) {
+                    description.append("：").append(phase.getGoal());
+                }
+                description.append("\n");
+            }
+        }
+        
+        // 创建传统格式的StudyPlan
+        StudyPlan plan = new StudyPlan(
+            entity.getTitle(),
+            entity.getCategory(),
+            description.toString().trim(),
+            entity.getTimeRange(),
+            entity.getDuration(),
+            entity.getPriority()
+        );
+        
+        // 填充阶段预览信息（用于对话框显示）
+        if (result.phases != null && !result.phases.isEmpty()) {
+            List<StudyPlan.PhasePreview> phasePreviews = new ArrayList<>();
+            
+            for (int i = 0; i < result.phases.size(); i++) {
+                StudyPhaseEntity phaseEntity = result.phases.get(i);
+                StudyPlan.PhasePreview phasePreview = new StudyPlan.PhasePreview(
+                    phaseEntity.getPhaseOrder(),
+                    phaseEntity.getPhaseName(),
+                    phaseEntity.getGoal(),
+                    phaseEntity.getDurationDays()
+                );
+                
+                // 填充任务模板
+                if (result.taskTemplates != null && i < result.taskTemplates.size()) {
+                    List<StructuredPlanParser.TaskTemplate> templates = result.taskTemplates.get(i);
+                    for (StructuredPlanParser.TaskTemplate template : templates) {
+                        StudyPlan.TaskPreview taskPreview = new StudyPlan.TaskPreview(
+                            template.content,
+                            template.minutes
+                        );
+                        phasePreview.addTask(taskPreview);
+                    }
+                }
+                
+                phasePreviews.add(phasePreview);
+            }
+            
+            plan.setPhases(phasePreviews);
+        }
+        
+        plans.add(plan);
+        
+        return plans;
     }
 }
 

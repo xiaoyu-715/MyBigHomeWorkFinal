@@ -10,7 +10,7 @@
 
 ### 1. 学习计划保存流程优化
 
-#### DeepSeekChatActivity的优化
+#### AIChatActivity的优化
 - ✅ **进度反馈增强**
   - 添加了保存进度对话框（`showSavingProgressDialog`）
   - 实时更新保存进度（`updateSavingProgress`）
@@ -151,7 +151,7 @@ if (intent.getBooleanExtra("from_ai_generation", false)) {
 4. 获得使用指导
 
 **优化状态**：✅ 已完成
-**影响范围**：DeepSeekChatActivity、StudyPlanActivity
+**影响范围**：AIChatActivity、StudyPlanActivity
 **用户体验提升**：显著
 
 ---

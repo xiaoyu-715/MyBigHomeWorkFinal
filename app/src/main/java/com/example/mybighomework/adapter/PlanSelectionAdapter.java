@@ -1,10 +1,14 @@
 package com.example.mybighomework.adapter;
 
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.DecelerateInterpolator;
 import android.widget.CheckBox;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -92,6 +96,146 @@ public class PlanSelectionAdapter extends RecyclerView.Adapter<PlanSelectionAdap
                 editClickListener.onEditClick(position, plan);
             }
         });
+        
+        // 设置阶段预览
+        setupPhasesPreview(holder, plan);
+    }
+    
+    /**
+     * 设置阶段预览区域
+     */
+    private void setupPhasesPreview(ViewHolder holder, StudyPlan plan) {
+        if (!plan.hasPhases() || holder.layoutPhasesSection == null) {
+            // 没有阶段信息，隐藏阶段预览区域
+            if (holder.layoutPhasesSection != null) {
+                holder.layoutPhasesSection.setVisibility(View.GONE);
+            }
+            return;
+        }
+        
+        List<StudyPlan.PhasePreview> phases = plan.getPhases();
+        
+        // 显示阶段预览区域
+        holder.layoutPhasesSection.setVisibility(View.VISIBLE);
+        
+        // 设置阶段数量
+        holder.tvPhasesCount.setText(phases.size() + "个阶段");
+        
+        // 重置展开状态
+        holder.isPhasesExpanded = false;
+        holder.layoutPhasesList.setVisibility(View.GONE);
+        holder.ivPhasesExpand.setRotation(90);
+        
+        // 清空并重新填充阶段列表
+        holder.layoutPhasesList.removeAllViews();
+        populatePhasesList(holder.layoutPhasesList, phases);
+        
+        // 设置展开/收起点击事件
+        holder.layoutPhasesHeader.setOnClickListener(v -> {
+            togglePhasesExpand(holder);
+        });
+    }
+    
+    /**
+     * 填充阶段列表
+     */
+    private void populatePhasesList(LinearLayout container, List<StudyPlan.PhasePreview> phases) {
+        LayoutInflater inflater = LayoutInflater.from(context);
+        
+        for (StudyPlan.PhasePreview phase : phases) {
+            View phaseView = inflater.inflate(R.layout.item_phase_preview, container, false);
+            
+            // 设置阶段序号
+            TextView tvPhaseOrder = phaseView.findViewById(R.id.tv_phase_order);
+            tvPhaseOrder.setText(String.valueOf(phase.getOrder()));
+            
+            // 设置阶段名称
+            TextView tvPhaseName = phaseView.findViewById(R.id.tv_phase_name);
+            tvPhaseName.setText(phase.getName());
+            
+            // 设置阶段目标
+            TextView tvPhaseGoal = phaseView.findViewById(R.id.tv_phase_goal);
+            tvPhaseGoal.setText(phase.getGoal());
+            
+            // 设置天数
+            TextView tvPhaseDays = phaseView.findViewById(R.id.tv_phase_days);
+            tvPhaseDays.setText(phase.getDurationDays() + "天");
+            
+            // 设置任务列表
+            LinearLayout layoutTaskList = phaseView.findViewById(R.id.layout_task_list);
+            LinearLayout layoutTasksContainer = phaseView.findViewById(R.id.layout_tasks_container);
+            ImageView ivExpandArrow = phaseView.findViewById(R.id.iv_expand_arrow);
+            LinearLayout layoutPhaseHeader = phaseView.findViewById(R.id.layout_phase_header);
+            
+            // 填充任务模板
+            if (phase.getTasks() != null && !phase.getTasks().isEmpty()) {
+                populateTasksList(layoutTaskList, phase.getTasks());
+                
+                // 设置阶段展开/收起点击事件
+                final boolean[] isExpanded = {false};
+                layoutPhaseHeader.setOnClickListener(v -> {
+                    isExpanded[0] = !isExpanded[0];
+                    layoutTasksContainer.setVisibility(isExpanded[0] ? View.VISIBLE : View.GONE);
+                    animateArrow(ivExpandArrow, isExpanded[0]);
+                });
+            } else {
+                // 没有任务，隐藏展开箭头
+                ivExpandArrow.setVisibility(View.GONE);
+            }
+            
+            container.addView(phaseView);
+        }
+    }
+    
+    /**
+     * 填充任务模板列表
+     */
+    private void populateTasksList(LinearLayout container, List<StudyPlan.TaskPreview> tasks) {
+        LayoutInflater inflater = LayoutInflater.from(context);
+        
+        for (StudyPlan.TaskPreview task : tasks) {
+            View taskView = inflater.inflate(R.layout.item_task_template, container, false);
+            
+            TextView tvTaskContent = taskView.findViewById(R.id.tv_task_content);
+            tvTaskContent.setText(task.getContent());
+            
+            TextView tvTaskMinutes = taskView.findViewById(R.id.tv_task_minutes);
+            tvTaskMinutes.setText(task.getMinutes() + "分钟");
+            
+            container.addView(taskView);
+        }
+    }
+    
+    /**
+     * 切换阶段列表展开/收起状态
+     */
+    private void togglePhasesExpand(ViewHolder holder) {
+        holder.isPhasesExpanded = !holder.isPhasesExpanded;
+        
+        if (holder.isPhasesExpanded) {
+            holder.layoutPhasesList.setVisibility(View.VISIBLE);
+        } else {
+            holder.layoutPhasesList.setVisibility(View.GONE);
+        }
+        
+        // 动画旋转箭头
+        animateArrow(holder.ivPhasesExpand, holder.isPhasesExpanded);
+    }
+    
+    /**
+     * 箭头旋转动画
+     */
+    private void animateArrow(ImageView arrow, boolean expand) {
+        float fromRotation = expand ? 90 : -90;
+        float toRotation = expand ? -90 : 90;
+        
+        ValueAnimator animator = ValueAnimator.ofFloat(fromRotation, toRotation);
+        animator.setDuration(200);
+        animator.setInterpolator(new DecelerateInterpolator());
+        animator.addUpdateListener(animation -> {
+            arrow.setRotation((float) animation.getAnimatedValue());
+        });
+        animator.start();
     }
     
     /**
@@ -172,8 +316,18 @@ public class PlanSelectionAdapter extends RecyclerView.Adapter<PlanSelectionAdap
         TextView tvDuration;
         android.widget.ImageButton btnEdit;
         View priorityIndicator;
-        android.widget.LinearLayout priorityContainer;
-        android.widget.ImageView ivPriorityIcon;
+        LinearLayout priorityContainer;
+        ImageView ivPriorityIcon;
+        
+        // 阶段预览相关视图
+        LinearLayout layoutPhasesSection;
+        LinearLayout layoutPhasesHeader;
+        LinearLayout layoutPhasesList;
+        TextView tvPhasesCount;
+        ImageView ivPhasesExpand;
+        
+        // 记录阶段列表是否展开
+        boolean isPhasesExpanded = false;
         
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
@@ -188,6 +342,13 @@ public class PlanSelectionAdapter extends RecyclerView.Adapter<PlanSelectionAdap
             priorityIndicator = itemView.findViewById(R.id.priority_indicator);
             priorityContainer = itemView.findViewById(R.id.priority_container);
             ivPriorityIcon = itemView.findViewById(R.id.iv_priority_icon);
+            
+            // 阶段预览相关视图
+            layoutPhasesSection = itemView.findViewById(R.id.layout_phases_section);
+            layoutPhasesHeader = itemView.findViewById(R.id.layout_phases_header);
+            layoutPhasesList = itemView.findViewById(R.id.layout_phases_list);
+            tvPhasesCount = itemView.findViewById(R.id.tv_phases_count);
+            ivPhasesExpand = itemView.findViewById(R.id.iv_phases_expand);
         }
     }
     

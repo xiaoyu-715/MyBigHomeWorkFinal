@@ -1,7 +1,7 @@
 # AI学习助手导航栏修复报告
 
 ## 问题描述
-AI学习助手（DeepSeekChatActivity）的导航栏上方有白色空白，导航栏位置偏下。
+AI学习助手（AIChatActivity）的导航栏上方有白色空白，导航栏位置偏下。
 
 ## 问题原因
 1. 根布局设置了 `android:fitsSystemWindows="true"`，为状态栏预留了空间
@@ -10,7 +10,7 @@ AI学习助手（DeepSeekChatActivity）的导航栏上方有白色空白，导�
 
 ## 修复方案
 
-### 1. **布局文件修改** (activity_deepseek_chat.xml)
+### 1. **布局文件修改** (activity_ai_chat.xml)
 
 ```xml
 <!-- 修改前 -->
@@ -33,7 +33,7 @@ AI学习助手（DeepSeekChatActivity）的导航栏上方有白色空白，导�
 - 将 `fitsSystemWindows` 添加到导航栏本身
 - 将 paddingTop 从 40dp 减少到 8dp
 
-### 2. **DeepSeekChatActivity.java 修改**
+### 2. **AIChatActivity.java 修改**
 
 添加状态栏设置方法：
 ```java
@@ -57,7 +57,7 @@ protected void onCreate(Bundle savedInstanceState) {
     // 设置状态栏透明
     setupStatusBar();
     
-    setContentView(R.layout.activity_deepseek_chat);
+    setContentView(R.layout.activity_ai_chat);
     // ...
 }
 ```

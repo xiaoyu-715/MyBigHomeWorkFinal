@@ -30,6 +30,8 @@ import com.example.mybighomework.repository.WrongQuestionRepository;
 import com.example.mybighomework.repository.UserSettingsRepository;
 import com.example.mybighomework.utils.ModuleStatisticsManager;
 import com.example.mybighomework.utils.TaskCompletionManager;
+import com.example.mybighomework.utils.TaskCompletionHelper;
+import com.example.mybighomework.utils.TaskProgressTracker;
 import java.util.Date;
 
 public class VocabularyActivity extends AppCompatActivity {
@@ -111,6 +113,9 @@ public class VocabularyActivity extends AppCompatActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
+        
+        // 注意：任务完成现在由TaskProgressTracker在每次答题时自动追踪
+        // 不再需要在onDestroy中手动标记任务完成
         
         if (executorService != null && !executorService.isShutdown()) {
             executorService.shutdown();
@@ -420,8 +425,8 @@ public class VocabularyActivity extends AppCompatActivity {
         // 更新得分显示
         tvScore.setText("得分: " + score);
         
-        // 【任务完成跟踪】每答一题，累计计数，达到20题自动完成任务
-        TaskCompletionManager.getInstance(this).incrementVocabularyCount();
+        // 【智能任务完成跟踪】每答一题，累计计数，达到目标自动完成任务
+        TaskProgressTracker.getInstance(this).recordProgress("vocabulary_training", 1);
     }
 
     private void saveWrongQuestion(VocabularyItem item, int userAnswerIndex) {

@@ -143,4 +143,7 @@
     <string name="progress_parsing">正在解析计划数据...</string>
     <string name="progress_completed">生成完成！</string>
 
+    <!-- 无障碍服务 -->
+    <string name="accessibility_service_description">此服务用于AI学习助手的手机自动化功能，可以帮助您自动完成学习任务。启用后，AI助手可以截取屏幕内容并模拟点击、滑动等操作。</string>
+
 </resources>

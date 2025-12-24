@@ -9,11 +9,17 @@ import androidx.lifecycle.MutableLiveData;
 
 import com.example.mybighomework.StudyPlan;
 import com.example.mybighomework.database.AppDatabase;
+import com.example.mybighomework.database.dao.StudyPlanDao;
+import com.example.mybighomework.database.entity.DailyTaskEntity;
+import com.example.mybighomework.database.entity.StudyPhaseEntity;
 import com.example.mybighomework.database.entity.StudyPlanEntity;
 import com.example.mybighomework.repository.StudyPlanRepository;
 
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -37,17 +43,35 @@ public class StudyPlanViewModel extends AndroidViewModel {
     private final MutableLiveData<Integer> completedPlansCount = new MutableLiveData<>(0);
     private final MutableLiveData<Integer> todayPlansCount = new MutableLiveData<>(0);
     
+    // 计划详情相关LiveData
+    private final MutableLiveData<StudyPlanRepository.PlanWithDetails> planDetails = new MutableLiveData<>();
+    private final MutableLiveData<List<DailyTaskEntity>> todayTasks = new MutableLiveData<>();
+    private final MutableLiveData<List<StudyPhaseEntity>> planPhases = new MutableLiveData<>();
+    
+    // 统计数据LiveData
+    private final MutableLiveData<Integer> streakDays = new MutableLiveData<>(0);
+    private final MutableLiveData<Integer> weeklyStudyMinutes = new MutableLiveData<>(0);
+    private final MutableLiveData<Integer> completedTasksCount = new MutableLiveData<>(0);
+    
     // 状态数据
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>(false);
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
     private final MutableLiveData<String> successMessage = new MutableLiveData<>();
     
+    // 日期格式化
+    private final SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+    
     public StudyPlanViewModel(@NonNull Application application) {
         super(application);
         
-        // 初始化 Repository
+        // 初始化 Repository（使用完整构造函数以支持阶段和任务操作）
         AppDatabase database = AppDatabase.getInstance(application);
-        studyPlanRepository = new StudyPlanRepository(database.studyPlanDao());
+        studyPlanRepository = new StudyPlanRepository(
+            application,
+            database.studyPlanDao(),
+            database.studyPhaseDao(),
+            database.dailyTaskDao()
+        );
         executorService = Executors.newSingleThreadExecutor();
         
         // 初始化 LiveData
@@ -58,53 +82,32 @@ public class StudyPlanViewModel extends AndroidViewModel {
     
     // ==================== LiveData Getters（为StudyPlan） ====================
     
-    /**
-     * 获取所有学习计划（StudyPlan）
-     */
     public LiveData<List<StudyPlan>> getAllPlans() {
         return allPlans;
     }
     
-    /**
-     * 获取总计划数
-     */
     public LiveData<Integer> getTotalPlansCount() {
         return totalPlansCount;
     }
     
-    /**
-     * 获取已完成计划数
-     */
     public LiveData<Integer> getCompletedPlansCount() {
         return completedPlansCount;
     }
     
-    /**
-     * 获取今日计划数
-     */
     public LiveData<Integer> getTodayPlansCount() {
         return todayPlansCount;
     }
     
     // ==================== LiveData Getters（为Entity） ====================
     
-    /**
-     * 获取所有学习计划
-     */
     public LiveData<List<StudyPlanEntity>> getAllStudyPlans() {
         return allStudyPlans;
     }
     
-    /**
-     * 获取活跃的学习计划
-     */
     public LiveData<List<StudyPlanEntity>> getActiveStudyPlans() {
         return activeStudyPlans;
     }
     
-    /**
-     * 获取已完成的学习计划
-     */
     public LiveData<List<StudyPlanEntity>> getCompletedStudyPlans() {
         return completedStudyPlans;
     }
@@ -121,18 +124,49 @@ public class StudyPlanViewModel extends AndroidViewModel {
         return successMessage;
     }
     
+    // ==================== 计划详情相关 Getters ====================
+    
+    public LiveData<StudyPlanRepository.PlanWithDetails> getPlanDetails() {
+        return planDetails;
+    }
+    
+    public LiveData<List<DailyTaskEntity>> getTodayTasks() {
+        return todayTasks;
+    }
+    
+    public LiveData<List<StudyPhaseEntity>> getPlanPhases() {
+        return planPhases;
+    }
+    
+    // ==================== 统计数据 Getters ====================
+    
+    public LiveData<Integer> getStreakDays() {
+        return streakDays;
+    }
+    
+    public LiveData<Integer> getWeeklyStudyMinutes() {
+        return weeklyStudyMinutes;
+    }
+    
+    public LiveData<Integer> getCompletedTasksCount() {
+        return completedTasksCount;
+    }
+    
     // ==================== 业务逻辑方法 ====================
     
     /**
      * 加载所有计划
      */
     public void loadAllPlans() {
+        android.util.Log.d("StudyPlanViewModel", "loadAllPlans 开始执行");
         executorService.execute(() -> {
             try {
-                // getAllStudyPlans() 直接返回 List<StudyPlan>，无需转换
+                android.util.Log.d("StudyPlanViewModel", "后台线程开始加载计划");
                 List<StudyPlan> plans = studyPlanRepository.getAllStudyPlans();
+                android.util.Log.d("StudyPlanViewModel", "加载到计划数量: " + (plans != null ? plans.size() : 0));
                 allPlans.postValue(plans);
             } catch (Exception e) {
+                android.util.Log.e("StudyPlanViewModel", "加载计划失败", e);
                 e.printStackTrace();
                 errorMessage.postValue("加载计划失败: " + e.getMessage());
             }
@@ -145,7 +179,6 @@ public class StudyPlanViewModel extends AndroidViewModel {
     public void loadStatistics() {
         executorService.execute(() -> {
             try {
-                // 获取统计数据
                 int total = studyPlanRepository.getAllStudyPlans().size();
                 int completed = studyPlanRepository.getPlansByStatus("已完成").size();
                 int today = studyPlanRepository.getTodayStudyPlans().size();
@@ -161,21 +194,48 @@ public class StudyPlanViewModel extends AndroidViewModel {
     }
     
     /**
-     * 按状态筛选计划
+     * 加载计划详情
      */
-    public void filterPlansByStatus(String status) {
-        executorService.execute(() -> {
-            try {
-                List<StudyPlan> plans;
-                if ("全部计划".equals(status) || "全部".equals(status)) {
-                    plans = studyPlanRepository.getAllStudyPlans();
-                } else {
-                    plans = studyPlanRepository.getPlansByStatus(status);
+    public void loadPlanDetails(int planId) {
+        isLoading.setValue(true);
+        
+        studyPlanRepository.getPlanWithDetailsAsync(planId, new StudyPlanRepository.OnPlanDetailsLoadedListener() {
+            @Override
+            public void onPlanDetailsLoaded(StudyPlanRepository.PlanWithDetails details) {
+                planDetails.postValue(details);
+                
+                // 同时更新阶段列表
+                if (details != null) {
+                    planPhases.postValue(details.getPhases());
+                    
+                    // 更新今日任务
+                    String today = dateFormat.format(new Date());
+                    List<DailyTaskEntity> tasks = details.getTasksForDate(today);
+                    todayTasks.postValue(tasks);
+                    
+                    // 更新统计数据
+                    if (details.getPlan() != null) {
+                        streakDays.postValue(details.getPlan().getStreakDays());
+                        weeklyStudyMinutes.postValue(details.getPlan().getTotalStudyTimeMinutes());
+                    }
+                    
+                    // 计算已完成任务数
+                    int completed = 0;
+                    for (DailyTaskEntity task : tasks) {
+                        if (task.isCompleted()) {
+                            completed++;
+                        }
+                    }
+                    completedTasksCount.postValue(completed);
                 }
-                allPlans.postValue(plans);
-            } catch (Exception e) {
-                e.printStackTrace();
-                errorMessage.postValue("筛选失败: " + e.getMessage());
+                
+                isLoading.postValue(false);
+            }
+            
+            @Override
+            public void onError(Exception e) {
+                errorMessage.postValue("加载计划详情失败: " + e.getMessage());
+                isLoading.postValue(false);
             }
         });
     }
@@ -188,7 +248,11 @@ public class StudyPlanViewModel extends AndroidViewModel {
         
         executorService.execute(() -> {
             try {
-                long id = studyPlanRepository.addStudyPlan(studyPlan);
+                // 转换为Entity
+                StudyPlanEntity entity = convertToEntity(studyPlan);
+                // 使用DAO直接插入
+                AppDatabase database = AppDatabase.getInstance(getApplication());
+                long id = database.studyPlanDao().insert(entity);
                 
                 if (id > 0) {
                     successMessage.postValue("学习计划创建成功");
@@ -217,39 +281,6 @@ public class StudyPlanViewModel extends AndroidViewModel {
     }
     
     /**
-     * 添加学习计划
-     */
-    public void addStudyPlan(StudyPlanEntity studyPlan, OnOperationCompleteListener listener) {
-        isLoading.setValue(true);
-        
-        executorService.execute(() -> {
-            try {
-                long id = studyPlanRepository.addStudyPlan(studyPlan);
-                
-                if (id > 0) {
-                    successMessage.postValue("学习计划创建成功");
-                    if (listener != null) {
-                        listener.onSuccess();
-                    }
-                } else {
-                    errorMessage.postValue("学习计划创建失败");
-                    if (listener != null) {
-                        listener.onError(new Exception("插入失败"));
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                errorMessage.postValue("创建学习计划时出错: " + e.getMessage());
-                if (listener != null) {
-                    listener.onError(e);
-                }
-            } finally {
-                isLoading.postValue(false);
-            }
-        });
-    }
-    
-    /**
      * 更新学习计划
      */
     public void updateStudyPlan(StudyPlanEntity studyPlan, OnOperationCompleteListener listener) {
@@ -257,7 +288,9 @@ public class StudyPlanViewModel extends AndroidViewModel {
         
         executorService.execute(() -> {
             try {
-                studyPlanRepository.updateStudyPlan(studyPlan);
+                // 使用DAO直接更新
+                AppDatabase database = AppDatabase.getInstance(getApplication());
+                database.studyPlanDao().update(studyPlan);
                 successMessage.postValue("学习计划更新成功");
                 
                 if (listener != null) {
@@ -277,174 +310,75 @@ public class StudyPlanViewModel extends AndroidViewModel {
     }
     
     /**
-     * 删除学习计划
+     * 根据状态过滤计划
      */
-    public void deleteStudyPlan(StudyPlanEntity studyPlan, OnOperationCompleteListener listener) {
-        isLoading.setValue(true);
-        
+    public void filterPlansByStatus(String status) {
         executorService.execute(() -> {
             try {
-                studyPlanRepository.deleteStudyPlan(studyPlan);
-                successMessage.postValue("学习计划已删除");
-                
-                if (listener != null) {
-                    listener.onSuccess();
+                List<StudyPlan> filteredPlans;
+                // 修复：正确处理"全部计划"和"全部"
+                if ("全部".equals(status) || "全部计划".equals(status)) {
+                    filteredPlans = studyPlanRepository.getAllStudyPlans();
+                } else {
+                    filteredPlans = studyPlanRepository.getPlansByStatus(status);
                 }
+                android.util.Log.d("StudyPlanViewModel", "过滤计划, 状态: " + status + ", 数量: " + (filteredPlans != null ? filteredPlans.size() : 0));
+                allPlans.postValue(filteredPlans);
             } catch (Exception e) {
                 e.printStackTrace();
-                errorMessage.postValue("删除学习计划时出错: " + e.getMessage());
-                
-                if (listener != null) {
-                    listener.onError(e);
-                }
-            } finally {
-                isLoading.postValue(false);
+                errorMessage.postValue("过滤计划失败: " + e.getMessage());
             }
         });
-    }
-    
-    /**
-     * 标记计划为已完成
-     */
-    public void markPlanAsCompleted(int planId, OnOperationCompleteListener listener) {
-        executorService.execute(() -> {
-            try {
-                studyPlanRepository.markPlanAsCompleted(planId);
-                successMessage.postValue("计划已标记为完成");
-                
-                if (listener != null) {
-                    listener.onSuccess();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                errorMessage.postValue("操作失败: " + e.getMessage());
-                
-                if (listener != null) {
-                    listener.onError(e);
-                }
-            }
-        });
-    }
-    
-    /**
-     * 更新计划进度
-     */
-    public void updatePlanProgress(int planId, int progress, OnOperationCompleteListener listener) {
-        executorService.execute(() -> {
-            try {
-                studyPlanRepository.updatePlanProgress(planId, progress);
-                
-                if (listener != null) {
-                    listener.onSuccess();
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                errorMessage.postValue("更新进度失败: " + e.getMessage());
-                
-                if (listener != null) {
-                    listener.onError(e);
-                }
-            }
-        });
-    }
-    
-    /**
-     * 获取今天的学习计划
-     */
-    public void getTodayStudyPlans(OnDataLoadListener<List<StudyPlanEntity>> listener) {
-        executorService.execute(() -> {
-            try {
-                List<StudyPlanEntity> plans = studyPlanRepository.getTodayStudyPlans();
-                
-                if (listener != null) {
-                    listener.onDataLoaded(plans);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                if (listener != null) {
-                    listener.onLoadError(e);
-                }
-            }
-        });
-    }
-    
-    /**
-     * 根据优先级获取学习计划
-     */
-    public void getStudyPlansByPriority(String priority, OnDataLoadListener<List<StudyPlanEntity>> listener) {
-        executorService.execute(() -> {
-            try {
-                List<StudyPlanEntity> plans = studyPlanRepository.getStudyPlansByPriority(priority);
-                
-                if (listener != null) {
-                    listener.onDataLoaded(plans);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                if (listener != null) {
-                    listener.onLoadError(e);
-                }
-            }
-        });
-    }
-    
-    // ==================== 回调接口 ====================
-    
-    /**
-     * 操作完成监听器
-     */
-    public interface OnOperationCompleteListener {
-        void onSuccess();
-        void onError(Exception e);
-    }
-    
-    /**
-     * 数据加载监听器
-     */
-    public interface OnDataLoadListener<T> {
-        void onDataLoaded(T data);
-        void onLoadError(Exception e);
     }
     
     // ==================== 转换方法 ====================
     
     /**
-     * 转换方法：Entity -> StudyPlan
+     * 转换方法：StudyPlan -> Entity
      */
-    private StudyPlan convertToStudyPlan(StudyPlanEntity entity) {
-        return new StudyPlan(
-            entity.getId(),
-            entity.getTitle(),
-            entity.getCategory(),
-            entity.getDescription(),
-            entity.getTimeRange(),
-            entity.getDuration(),
-            entity.getProgress(),
-            entity.getPriority(),
-            entity.getStatus(),
-            entity.isActiveToday()
-        );
+    private StudyPlanEntity convertToEntity(StudyPlan studyPlan) {
+        StudyPlanEntity entity = new StudyPlanEntity();
+        entity.setId(studyPlan.getId());
+        entity.setTitle(studyPlan.getTitle());
+        entity.setDescription(studyPlan.getDescription());
+        entity.setCategory(studyPlan.getCategory());
+        entity.setStatus(studyPlan.getStatus());
+        entity.setPriority(studyPlan.getPriority());
+        entity.setProgress(studyPlan.getProgress());
+        entity.setTimeRange(studyPlan.getTimeRange());
+        entity.setDuration(studyPlan.getDuration());
+        entity.setActiveToday(studyPlan.isActiveToday());
+        // 设置默认值
+        entity.setTotalDays(30);
+        entity.setCompletedDays(0);
+        entity.setTotalStudyTime(0);
+        entity.setStreakDays(0);
+        entity.setCreatedTime(System.currentTimeMillis());
+        entity.setLastModifiedTime(System.currentTimeMillis());
+        entity.setAiGenerated(false);
+        entity.setDailyMinutes(120);
+        return entity;
     }
     
-    /**
-     * 批量转换：Entity List -> StudyPlan List
-     */
-    private List<StudyPlan> convertToStudyPlans(List<StudyPlanEntity> entities) {
-        List<StudyPlan> plans = new ArrayList<>();
-        if (entities != null) {
-            for (StudyPlanEntity entity : entities) {
-                plans.add(convertToStudyPlan(entity));
-            }
-        }
-        return plans;
+    // ==================== 回调接口 ====================
+    
+    public interface OnOperationCompleteListener {
+        void onSuccess();
+        void onError(Exception e);
     }
     
-    @Override
-    protected void onCleared() {
-        super.onCleared();
-        // ViewModel 被销毁时，关闭线程池
-        if (executorService != null && !executorService.isShutdown()) {
-            executorService.shutdown();
-        }
+    public interface OnDataLoadListener<T> {
+        void onDataLoaded(T data);
+        void onLoadError(Exception e);
+    }
+    
+    public interface OnTaskCompletionListener {
+        void onTaskCompletionUpdated(DailyTaskEntity task, StudyPlanEntity plan);
+        void onError(Exception e);
+    }
+    
+    public interface OnStatisticsRefreshedListener {
+        void onStatisticsRefreshed(int streakDays, int weeklyMinutes, int completedTasks);
+        void onError(Exception e);
     }
 }

@@ -10,6 +10,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.mybighomework.utils.ActionTypeInferrer;
+
 import java.util.List;
 
 public class DailyTaskAdapter extends RecyclerView.Adapter<DailyTaskAdapter.TaskViewHolder> {
@@ -40,11 +42,20 @@ public class DailyTaskAdapter extends RecyclerView.Adapter<DailyTaskAdapter.Task
         DailyTask task = taskList.get(position);
         
         holder.tvTitle.setText(task.getTitle());
-        holder.tvDescription.setText(task.getDescription());
+        
+        // 显示进度信息
+        String progressText = task.getProgressText();
+        String description = task.getDescription();
+        if (progressText != null && !progressText.isEmpty() && !"未完成".equals(progressText)) {
+            holder.tvDescription.setText(description + " · " + progressText);
+        } else {
+            holder.tvDescription.setText(description);
+        }
+        
         holder.checkBox.setChecked(task.isCompleted());
         
-        // 设置任务图标
-        int iconRes = getTaskIcon(task.getType());
+        // 设置任务图标（优先使用actionType）
+        int iconRes = getTaskIcon(task.getActionType(), task.getType());
         holder.ivIcon.setImageResource(iconRes);
         
         // 设置完成状态的视觉效果
@@ -71,21 +82,46 @@ public class DailyTaskAdapter extends RecyclerView.Adapter<DailyTaskAdapter.Task
         return taskList.size();
     }
     
-    private int getTaskIcon(String type) {
-        switch (type) {
-            case "vocabulary":
-                return R.drawable.ic_vocabulary;
-            case "exam_practice":
-                return R.drawable.ic_exam;
-            case "listening":
-                return R.drawable.ic_headphones;
-            case "writing":
-                return R.drawable.ic_edit;
-            case "daily_sentence":
-                return R.drawable.ic_quote;
-            default:
-                return R.drawable.ic_task;
+    /**
+     * 获取任务图标
+     * 优先使用actionType，其次使用type
+     */
+    private int getTaskIcon(String actionType, String type) {
+        // 优先根据actionType获取图标
+        if (actionType != null && !actionType.isEmpty()) {
+            switch (actionType) {
+                case "daily_sentence":
+                    return R.drawable.ic_quote;
+                case "real_exam":
+                    return R.drawable.ic_exam;
+                case "mock_exam":
+                    return R.drawable.ic_exam;
+                case "wrong_question_practice":
+                    return R.drawable.ic_refresh;
+                case "vocabulary_training":
+                    return R.drawable.ic_vocabulary;
+                case "translation_practice":
+                    return R.drawable.ic_translate;
+            }
         }
+        
+        // 兼容旧的type字段
+        if (type != null) {
+            switch (type) {
+                case "vocabulary":
+                    return R.drawable.ic_vocabulary;
+                case "exam_practice":
+                    return R.drawable.ic_exam;
+                case "listening":
+                    return R.drawable.ic_headphones;
+                case "writing":
+                    return R.drawable.ic_edit;
+                case "daily_sentence":
+                    return R.drawable.ic_quote;
+            }
+        }
+        
+        return R.drawable.ic_task;
     }
     
     static class TaskViewHolder extends RecyclerView.ViewHolder {

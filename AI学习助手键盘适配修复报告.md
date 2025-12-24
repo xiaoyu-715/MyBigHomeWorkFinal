@@ -1,7 +1,7 @@
 # AI学习助手键盘适配修复报告
 
 ## 问题描述
-用户在AI学习助手（DeepSeekChatActivity）中输入消息时，软键盘弹出后会遮挡输入框，导致用户看不到正在输入的内容。
+用户在AI学习助手（AIChatActivity）中输入消息时，软键盘弹出后会遮挡输入框，导致用户看不到正在输入的内容。
 
 ## 根本原因
 1. 软键盘模式设置不当
@@ -14,13 +14,13 @@
 ```xml
 <!-- 修改前 -->
 <activity
-    android:name=".DeepSeekChatActivity"
+    android:name=".AIChatActivity"
     android:exported="false"
     android:windowSoftInputMode="adjustResize" />
 
 <!-- 修改后 -->
 <activity
-    android:name=".DeepSeekChatActivity"
+    android:name=".AIChatActivity"
     android:exported="false"
     android:windowSoftInputMode="adjustPan|stateHidden" />
 ```
@@ -29,13 +29,13 @@
 - `adjustPan`：当键盘弹出时，整个窗口会向上平移，确保输入框可见
 - `stateHidden`：进入界面时不自动弹出键盘
 
-### 2. **布局文件优化** (activity_deepseek_chat.xml)
+### 2. **布局文件优化** (activity_ai_chat.xml)
 - 添加 `android:fitsSystemWindows="true"` 到根布局
 - 为EditText添加输入法选项：
   - `android:imeOptions="actionSend"` - 键盘显示发送按钮
   - `android:inputType="textMultiLine|textCapSentences"` - 支持多行输入和句首大写
 
-### 3. **DeepSeekChatActivity.java 代码优化**
+### 3. **AIChatActivity.java 代码优化**
 
 #### 添加键盘处理方法
 ```java

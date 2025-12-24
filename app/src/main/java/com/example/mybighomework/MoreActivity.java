@@ -25,7 +25,7 @@ public class MoreActivity extends AppCompatActivity {
     
     // 设置与帮助
     private LinearLayout btnAppSettings;
-    private LinearLayout btnDeepSeekChat;
+    private LinearLayout btnAIChat;
     private LinearLayout btnHelpFeedback;
     private LinearLayout btnAbout;
     
@@ -66,7 +66,7 @@ public class MoreActivity extends AppCompatActivity {
         
         // 设置与帮助
         btnAppSettings = findViewById(R.id.btn_app_settings);
-        btnDeepSeekChat = findViewById(R.id.btn_deepseek_chat);
+        btnAIChat = findViewById(R.id.btn_ai_chat);
         btnHelpFeedback = findViewById(R.id.btn_help_feedback);
         btnAbout = findViewById(R.id.btn_about);
         
@@ -111,8 +111,8 @@ public class MoreActivity extends AppCompatActivity {
             startActivity(intent);
         });
 
-        btnDeepSeekChat.setOnClickListener(v -> {
-            Intent intent = new Intent(MoreActivity.this, DeepSeekChatActivity.class);
+        btnAIChat.setOnClickListener(v -> {
+            Intent intent = new Intent(MoreActivity.this, AIChatActivity.class);
             startActivity(intent);
         });
 

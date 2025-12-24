@@ -2,7 +2,7 @@
 
 ## 🎉 功能概述
 
-成功实现了从DeepSeek AI对话中自动生成学习计划的完整功能链路，用户可以通过与AI助手对话后，点击按钮自动生成结构化的学习计划并保存到学习计划模块中。
+成功实现了从智谱AI对话中自动生成学习计划的完整功能链路，用户可以通过与AI助手对话后，点击按钮自动生成结构化的学习计划并保存到学习计划模块中。
 
 ---
 
@@ -50,7 +50,7 @@
 **文件**: `app/src/main/java/com/example/mybighomework/utils/StudyPlanExtractor.java`
 
 **核心功能**：
-- ✅ `extractPlans()` - 调用DeepSeek API生成计划
+- ✅ `extractPlans()` - 调用智谱AI API生成计划
 - ✅ `buildStructuredPrompt()` - 构建结构化提示词
 - ✅ `parseJsonResponse()` - 解析JSON返回的计划
 - ✅ `extractJsonFromMarkdown()` - 提取JSON（处理markdown包裹）
@@ -100,8 +100,8 @@
 
 ### 6. 主Activity集成（1个文件）
 
-#### 6.1 DeepSeekChatActivity
-**文件**: `app/src/main/java/com/example/mybighomework/DeepSeekChatActivity.java`
+#### 6.1 AIChatActivity
+**文件**: `app/src/main/java/com/example/mybighomework/AIChatActivity.java`
 
 **添加的成员变量**：
 - ✅ `StudyPlanRepository studyPlanRepository` - 学习计划仓库
@@ -145,7 +145,7 @@
 ### 用户操作流程：
 
 1. **用户与AI对话**
-   - 用户向DeepSeek AI助手描述学习需求
+   - 用户向智谱AI助手描述学习需求
    - AI回复学习建议和方法
 
 2. **智能检测（自动）**
@@ -157,7 +157,7 @@
    - 系统收集最近5轮对话作为上下文
 
 4. **AI生成计划**
-   - 使用结构化Prompt调用DeepSeek API
+   - 使用结构化Prompt调用智谱AI API
    - AI分析对话内容，生成1-3个学习计划
    - 返回JSON格式的计划数据
 
@@ -281,7 +281,7 @@
 ### 用户使用步骤：
 
 1. **打开AI助手**
-   - 从"更多功能"进入DeepSeek AI助手
+   - 从主页进入AI学习助手
 
 2. **描述学习需求**
    ```
@@ -312,7 +312,7 @@
 ## 📚 技术架构
 
 ```
-DeepSeekChatActivity (UI层)
+AIChatActivity (UI层)
     ↓
     ├── ChatMessageAdapter (适配器)
     │   └── 显示按钮 + 点击监听
@@ -320,7 +320,7 @@ DeepSeekChatActivity (UI层)
 StudyPlanExtractor (工具类)
     ↓
     ├── 构建结构化Prompt
-    ├── 调用DeepSeek API
+    ├── 调用智谱AI API
     └── 解析JSON响应
     ↓
 PlanSelectionDialog (对话框)
@@ -366,7 +366,7 @@ StudyPlanActivity (学习计划页面)
 
 ## 🔧 配置要求
 
-- ✅ DeepSeek API Key 已配置
+- ✅ 智谱AI API Key 已配置（内置免费）
 - ✅ 网络连接正常
 - ✅ 学习计划模块正常工作
 - ✅ Room数据库正常
@@ -377,7 +377,7 @@ StudyPlanActivity (学习计划页面)
 
 ### 调用示例：
 ```java
-// 在DeepSeekChatActivity中
+// 在AIChatActivity中
 // 用户点击生成按钮后自动执行
 
 // 1. 获取对话上下文

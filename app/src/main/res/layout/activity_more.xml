@@ -303,7 +303,7 @@
 
                     <!-- 智谱AI 学习助手 (glm-4-flash免费模型) -->
                     <LinearLayout
-                        android:id="@+id/btn_deepseek_chat"
+                        android:id="@+id/btn_ai_chat"
                         android:layout_width="match_parent"
                         android:layout_height="48dp"
                         android:orientation="horizontal"

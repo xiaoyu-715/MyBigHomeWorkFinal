@@ -82,7 +82,7 @@
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:text="总分 / 75分"
+                    android:text="总分 / 85分"
                     android:textSize="14sp"
                     android:textColor="#999999"
                     android:layout_marginBottom="12dp"/>
@@ -340,7 +340,7 @@
                         android:id="@+id/tv_writing_score"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="0/15"
+                        android:text="0/25"
                         android:textSize="16sp"
                         android:textStyle="bold"
                         android:textColor="@color/primary_blue"/>

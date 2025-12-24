@@ -2,7 +2,7 @@
 
 ## 📋 优化概述
 
-成功完成了DeepSeek学习计划生成模块的**全面UI设计优化**，采用现代化的Material Design设计语言，增加了精美的渐变效果、图标系统、动画效果，显著提升视觉吸引力和用户体验。
+成功完成了AI学习计划生成模块的**全面UI设计优化**，采用现代化的Material Design设计语言，增加了精美的渐变效果、图标系统、动画效果，显著提升视觉吸引力和用户体验。
 
 ---
 
@@ -349,7 +349,7 @@ RecyclerView列表动画控制器
 ```
 ✅ PlanSelectionAdapter.java        - 添加优先级样式设置方法
 ✅ PlanSelectionDialog.java         - 添加统计信息和列表动画
-✅ DeepSeekChatActivity.java        - 添加步骤指示器更新逻辑
+✅ AIChatActivity.java              - 添加步骤指示器更新逻辑
 ```
 
 ### 修改资源文件（2个）

@@ -37,10 +37,10 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout llDailyTask;
     private LinearLayout llCameraTranslation;
     private LinearLayout llAiAssistant;
+    private LinearLayout llAutoGlmAssistant;
     private LinearLayout llTextTranslation;
     private TextView tvTaskProgress;
 
-    
     // 学习进度相关的TextView
     private TextView tvStudyDays;
     private TextView tvVocabularyCount;
@@ -77,6 +77,9 @@ public class MainActivity extends AppCompatActivity {
         // 初始化题目数据（首次运行或数据更新时）
         QuestionDataInitializer.initializeIfNeeded(getApplication());
         
+        // 修复旧任务的actionType字段（用于智能任务完成系统）
+        AppDatabase.fixOldTasksActionType(this);
+        
         initViews();
         setupClickListeners();
         observeViewModel(); // 观察 ViewModel 的数据变化
@@ -97,6 +100,7 @@ public class MainActivity extends AppCompatActivity {
         llDailyTask = findViewById(R.id.ll_daily_task);
         llCameraTranslation = findViewById(R.id.ll_camera_translation);
         llAiAssistant = findViewById(R.id.ll_ai_assistant);
+        llAutoGlmAssistant = findViewById(R.id.ll_autoglm_assistant);
         llTextTranslation = findViewById(R.id.ll_text_translation);
         tvTaskProgress = findViewById(R.id.tv_task_progress);
 
@@ -212,7 +216,7 @@ public class MainActivity extends AppCompatActivity {
         llAiAssistant.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                Intent intent = new Intent(MainActivity.this, DeepSeekChatActivity.class);
+                Intent intent = new Intent(MainActivity.this, AIChatActivity.class);
                 startActivity(intent);
             }
         });
@@ -226,25 +230,69 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // AutoGLM智能助手点击事件
+        llAutoGlmAssistant.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, com.example.mybighomework.autoglm.ui.AIAssistantActivity.class);
+                startActivity(intent);
+            }
+        });
+
     }
     
     private void updateTaskProgress() {
-        SharedPreferences sharedPreferences = getSharedPreferences("daily_tasks", MODE_PRIVATE);
-        java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
-        String today = sdf.format(new java.util.Date());
-        
-        // 定义任务类型列表，与DailyTaskActivity中的保持一致（只保留三个核心任务）
-        String[] taskTypes = {"vocabulary", "exam_practice", "daily_sentence"};
-        
-        int completedTasks = 0;
-        for (String taskType : taskTypes) {
-            if (sharedPreferences.getBoolean(today + "_" + taskType, false)) {
-                completedTasks++;
+        // 在后台线程中从数据库查询任务完成状态
+        new Thread(() -> {
+            try {
+                java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd", java.util.Locale.getDefault());
+                String today = sdf.format(new java.util.Date());
+                
+                AppDatabase database = AppDatabase.getInstance(this);
+                com.example.mybighomework.database.dao.DailyTaskDao taskDao = database.dailyTaskDao();
+                
+                // 获取所有活跃计划
+                java.util.List<com.example.mybighomework.database.entity.StudyPlanEntity> activePlans = 
+                        database.studyPlanDao().getActivePlans();
+                
+                int totalTasks = 0;
+                int completedTasks = 0;
+                
+                if (activePlans != null && !activePlans.isEmpty()) {
+                    // 从数据库获取今日任务统计
+                    for (com.example.mybighomework.database.entity.StudyPlanEntity plan : activePlans) {
+                        totalTasks += taskDao.getTotalTaskCount(plan.getId(), today);
+                        completedTasks += taskDao.getCompletedTaskCount(plan.getId(), today);
+                    }
+                }
+                
+                // 如果数据库中没有任务，使用SharedPreferences作为备选（兼容默认任务）
+                if (totalTasks == 0) {
+                    SharedPreferences sharedPreferences = getSharedPreferences("daily_tasks", MODE_PRIVATE);
+                    String[] taskTypes = {"vocabulary", "exam_practice", "daily_sentence"};
+                    totalTasks = taskTypes.length;
+                    completedTasks = 0;
+                    for (String taskType : taskTypes) {
+                        if (sharedPreferences.getBoolean(today + "_" + taskType, false)) {
+                            completedTasks++;
+                        }
+                    }
+                }
+                
+                final int finalTotal = totalTasks;
+                final int finalCompleted = completedTasks;
+                
+                runOnUiThread(() -> {
+                    tvTaskProgress.setText(finalCompleted + "/" + finalTotal);
+                });
+            } catch (Exception e) {
+                e.printStackTrace();
+                // 出错时显示默认值
+                runOnUiThread(() -> {
+                    tvTaskProgress.setText("0/0");
+                });
             }
-        }
-        
-        int totalTasks = taskTypes.length;
-        tvTaskProgress.setText(completedTasks + "/" + totalTasks);
+        }).start();
     }
     
     private void loadStudyProgressData() {

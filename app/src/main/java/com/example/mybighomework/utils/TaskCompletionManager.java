@@ -10,7 +10,15 @@ import java.util.Locale;
 /**
  * 任务完成管理器
  * 管理每日任务的完成状态和进度跟踪
+ * 
+ * @deprecated 此类已废弃，请使用 {@link TaskProgressTracker} 代替。
+ * TaskProgressTracker 提供了更完善的任务进度追踪功能，支持：
+ * - 数据库持久化存储
+ * - 多种完成类型（count/simple）
+ * - 自动完成检测
+ * - 与AI生成的学习计划集成
  */
+@Deprecated
 public class TaskCompletionManager {
     
     private static final String PREFS_NAME = "daily_tasks";

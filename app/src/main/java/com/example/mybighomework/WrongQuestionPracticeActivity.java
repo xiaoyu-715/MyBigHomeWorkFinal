@@ -19,6 +19,7 @@ import androidx.core.content.ContextCompat;
 import com.example.mybighomework.database.entity.WrongQuestionEntity;
 import com.example.mybighomework.repository.WrongQuestionRepository;
 import com.example.mybighomework.database.AppDatabase;
+import com.example.mybighomework.utils.TaskProgressTracker;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -300,6 +301,9 @@ public class WrongQuestionPracticeActivity extends AppCompatActivity {
         
         // 更新分数显示
         tvScore.setText("正确: " + correctCount + " | 错误: " + wrongCount);
+        
+        // 【智能任务完成跟踪】每答一题，累计计数，达到目标自动完成任务
+        TaskProgressTracker.getInstance(this).recordProgress("wrong_question_practice", 1);
         
         // 显示结果区域
         showResultArea(currentQuestion, selectedOption == correctAnswer);

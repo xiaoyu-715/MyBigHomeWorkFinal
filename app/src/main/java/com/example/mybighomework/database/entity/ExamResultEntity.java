@@ -30,7 +30,7 @@ public class ExamResultEntity {
     private float readingScore;         // 阅读理解得分（满分25分）
     private float newTypeScore;         // 新题型得分（满分10分）
     private float translationScore;     // 翻译得分（满分15分）
-    private float writingScore;         // 写作得分（满分15分）
+    private float writingScore;         // 写作得分（满分25分，Part A 10分 + Part B 15分）
     
     // 总分和统计
     private float totalScore;           // 总分（满分75分）

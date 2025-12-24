@@ -27,6 +27,7 @@ import com.example.mybighomework.repository.StudyRecordRepository;
 import com.example.mybighomework.repository.QuestionNoteRepository;
 import com.example.mybighomework.database.repository.ExamResultRepository;
 import com.example.mybighomework.api.ZhipuAIService;
+import com.example.mybighomework.utils.TaskProgressTracker;
 import android.app.ProgressDialog;
 import android.content.SharedPreferences;
 import android.os.Handler;
@@ -102,7 +103,10 @@ public class ExamAnswerActivity extends AppCompatActivity {
         String[] options; // 选项
         int correctAnswer; // 正确答案索引
         String explanation; // 答案解析
+        String referenceAnswer; // 参考答案（翻译题的标准译文）
+        String writingType; // 写作类型（"PART_A" 或 "PART_B"）
 
+        // 原有构造函数（兼容现有代码）
         ExamQuestion(QuestionType type, String title, String passage, String question,
                     String[] options, int correctAnswer, String explanation) {
             this.type = type;
@@ -112,6 +116,23 @@ public class ExamAnswerActivity extends AppCompatActivity {
             this.options = options;
             this.correctAnswer = correctAnswer;
             this.explanation = explanation;
+            this.referenceAnswer = null;
+            this.writingType = null;
+        }
+        
+        // 扩展构造函数（支持参考答案和写作类型）
+        ExamQuestion(QuestionType type, String title, String passage, String question,
+                    String[] options, int correctAnswer, String explanation,
+                    String referenceAnswer, String writingType) {
+            this.type = type;
+            this.title = title;
+            this.passage = passage;
+            this.question = question;
+            this.options = options;
+            this.correctAnswer = correctAnswer;
+            this.explanation = explanation;
+            this.referenceAnswer = referenceAnswer;
+            this.writingType = writingType;
         }
     }
 
@@ -812,27 +833,101 @@ public class ExamAnswerActivity extends AppCompatActivity {
             "答案：A. Stay positive（保持积极）。本段强调使用积极正面的语言，谈论什么是对的而不是错的。"
         ));
 
-        // 翻译题目 (5题，每题2分，共10分)
+        // ========== 翻译题目 (5道小题，每题3分，共15分) - 2025年考研英语二真题 ==========
+        
+        // 第46题：翻译第一段
         questions.add(new ExamQuestion(
             QuestionType.TRANSLATION,
-            "翻译",
-            "Recent decades have seen science move into a convention where engagement in the subject can only be done through institutions, such as a university. Citizen science provides an opportunity for greater public engagement and the democratisation of science.\n\nBut by utilising the natural curiosity of the general public it is possible to overcome many of these challenges by engaging non-scientists directly in the research process. Anyone can be a citizen scientist, regardless of age, nationality or academic experience.\n\nScientists have employed a variety of ways to engage the general public in their research, such as making data analysis into an online game or sample collection into a smartphone application.\n\nThese groups of people are part of a rapidly expanding biotechnological social movement of citizen scientists and professional scientists seeking to take discovery out of institutions and put it into the hands of anyone with the enthusiasm.\n\nThey pool resources, collaborate, think outside the box, and find solutions and ways around obstacles to explore science for the sake of science without the traditional boundaries of working inside a formal setting.",
-            "Section III Translation\nDirections: Read the following text carefully and then translate the underlined segments into Chinese. Write your answers on the ANSWER SHEET. (10 points)",
+            "翻译 - 第46题",
+            "Recent decades have seen science move into a convention where engagement in the subject can only be done through institutions, such as a university.",
+            "46. 请将以下英文翻译成中文：\n\nRecent decades have seen science move into a convention where engagement in the subject can only be done through institutions, such as a university.",
             null,
             -1,
-            "翻译题目：将划线部分翻译成中文。划线部分包括5段，每段需翻译。"
+            "翻译第一段：关于科学参与的惯例。",
+            "近几十年来，科学已经形成了一种惯例，即只有通过大学等机构才能参与科学研究。",
+            null
+        ));
+        
+        // 第47题：翻译第二段
+        questions.add(new ExamQuestion(
+            QuestionType.TRANSLATION,
+            "翻译 - 第47题",
+            "But by utilising the natural curiosity of the general public it is possible to overcome many of these challenges by engaging non-scientists directly in the research process.",
+            "47. 请将以下英文翻译成中文：\n\nBut by utilising the natural curiosity of the general public it is possible to overcome many of these challenges by engaging non-scientists directly in the research process.",
+            null,
+            -1,
+            "翻译第二段：关于利用公众好奇心。",
+            "但是，通过利用公众的天然好奇心，让非科学家直接参与研究过程，就有可能克服许多这样的挑战。",
+            null
+        ));
+        
+        // 第48题：翻译第三段
+        questions.add(new ExamQuestion(
+            QuestionType.TRANSLATION,
+            "翻译 - 第48题",
+            "Scientists have employed a variety of ways to engage the general public in their research, such as making data analysis into an online game or sample collection into a smartphone application.",
+            "48. 请将以下英文翻译成中文：\n\nScientists have employed a variety of ways to engage the general public in their research, such as making data analysis into an online game or sample collection into a smartphone application.",
+            null,
+            -1,
+            "翻译第三段：关于科学家吸引公众参与的方式。",
+            "科学家们采用了多种方式让公众参与他们的研究，例如将数据分析变成在线游戏，或将样本收集变成智能手机应用程序。",
+            null
+        ));
+        
+        // 第49题：翻译第四段
+        questions.add(new ExamQuestion(
+            QuestionType.TRANSLATION,
+            "翻译 - 第49题",
+            "These groups of people are part of a rapidly expanding biotechnological social movement of citizen scientists and professional scientists seeking to take discovery out of institutions and put it into the hands of anyone with the enthusiasm.",
+            "49. 请将以下英文翻译成中文：\n\nThese groups of people are part of a rapidly expanding biotechnological social movement of citizen scientists and professional scientists seeking to take discovery out of institutions and put it into the hands of anyone with the enthusiasm.",
+            null,
+            -1,
+            "翻译第四段：关于公民科学家运动。",
+            "这些人群是快速扩张的生物技术社会运动的一部分，由公民科学家和专业科学家组成，他们致力于将科学发现从机构中解放出来，交到任何有热情的人手中。",
+            null
+        ));
+        
+        // 第50题：翻译第五段
+        questions.add(new ExamQuestion(
+            QuestionType.TRANSLATION,
+            "翻译 - 第50题",
+            "They pool resources, collaborate, think outside the box, and find solutions and ways around obstacles to explore science for the sake of science without the traditional boundaries of working inside a formal setting.",
+            "50. 请将以下英文翻译成中文：\n\nThey pool resources, collaborate, think outside the box, and find solutions and ways around obstacles to explore science for the sake of science without the traditional boundaries of working inside a formal setting.",
+            null,
+            -1,
+            "翻译第五段：关于他们的合作方式。",
+            "他们汇集资源、相互合作、跳出思维定式，寻找解决方案和绕过障碍的方法，为了科学而探索科学，不受在正式环境中工作的传统界限的限制。",
+            null
         ));
 
-        // 写作题目 (2题，Part A 10分，Part B 20分，共30分)
+        // ========== 写作题目 (Part A 10分，Part B 15分，共25分) ==========
+        
+        // 第51题：Part A 应用文写作
         questions.add(new ExamQuestion(
             QuestionType.WRITING,
-            "写作",
+            "写作 Part A - 第51题",
             "",
-            "Section III Writing\nPart A\n51. Directions:\nRead the following email from your classmate Paul and write him a reply.\n\nDear Li Ming,\n\nI was really excited to hear that you'd invite some young craftsmen to demonstrate their innovative craft-making on campus. May I know more about what they'll Show? Also, I'd like to help with your preparation work. Please let me know what I can do.\n\nYours,\nPaul\n\nWrite your answer in about 100 words on the ANSWER SHEET.\nDo not use your own name in your email; use \"Li Ming\" instead. (10 points)\n\nPart B\n52. Directions: Write an essay of 160-200 based on the following table. In your essay, you should describe the table briefly, explain its intended meaning, and give your comments.\n\n近年来全国居民平均每百户年末主要耐用消费品拥有量\n年份\t空调(台)\t洗衣机(台)\t电冰箱(台)\n2014\t75.2\t83.7\t85.5\n2017\t96.1\t91.7\t95.3\n2020\t117.7\t96.7\t101.8\n2023\t145.9\t98.2\t103.4\n\n(20 points)",
+            "51. Directions:\nRead the following email from your classmate Paul and write him a reply.\n\nDear Li Ming,\n\nI was really excited to hear that you'd invite some young craftsmen to demonstrate their innovative craft-making on campus. May I know more about what they'll show? Also, I'd like to help with your preparation work. Please let me know what I can do.\n\nYours,\nPaul\n\nWrite your answer in about 100 words on the ANSWER SHEET.\nDo not use your own name in your email; use \"Li Ming\" instead. (10 points)",
             null,
             -1,
-            "写作题目：Part A是邮件回复（约100词），Part B是图表作文（160-200词）。"
+            "Part A：邮件回复，约100词，满分10分。",
+            null,
+            "PART_A"
         ));
+        
+        // 第52题：Part B 图表作文
+        questions.add(new ExamQuestion(
+            QuestionType.WRITING,
+            "写作 Part B - 第52题",
+            "",
+            "52. Directions: Write an essay of 160-200 words based on the following table. In your essay, you should:\n1) describe the table briefly,\n2) explain its intended meaning, and\n3) give your comments.\n\n【表格：近年来全国居民平均每百户年末主要耐用消费品拥有量】\n年份\t空调(台)\t洗衣机(台)\t电冰箱(台)\n2014\t75.2\t83.7\t85.5\n2017\t96.1\t91.7\t95.3\n2020\t117.7\t96.7\t101.8\n2023\t145.9\t98.2\t103.4\n\n(15 points)",
+            null,
+            -1,
+            "Part B：图表作文，160-200词，满分15分。",
+            null,
+            "PART_B"
+        ));
+        
             android.util.Log.d("ExamAnswerActivity", "考试数据初始化完成，总题数：" + questions.size());
         } catch (Exception e) {
             android.util.Log.e("ExamAnswerActivity", "考试数据初始化失败", e);
@@ -1084,14 +1179,17 @@ public class ExamAnswerActivity extends AppCompatActivity {
         layoutTranslation.setVisibility(View.VISIBLE);
         layoutWriting.setVisibility(View.GONE);
 
-        // 显示题目指令和英文原文
+        // 显示题号和英文原文
         if (question.passage != null && !question.passage.isEmpty()) {
             tvPassage.setVisibility(View.VISIBLE);
-            // 题目指令在顶部，英文原文在下方
-            String displayText = "Section III Translation\n" +
-                    "Directions: Read the following text carefully and then translate the underlined segments into Chinese.\n\n" +
-                    question.passage;
+            // 显示题目标题和英文原文
+            String displayText = question.title + "\n\n" +
+                    "【英文原文】\n" + question.passage + "\n\n" +
+                    "请将上述英文翻译成中文：";
             tvPassage.setText(displayText);
+        } else if (question.question != null && !question.question.isEmpty()) {
+            tvPassage.setVisibility(View.VISIBLE);
+            tvPassage.setText(question.question);
         } else {
             tvPassage.setVisibility(View.GONE);
         }
@@ -1108,7 +1206,7 @@ public class ExamAnswerActivity extends AppCompatActivity {
         String savedAnswer = userAnswers.get(currentQuestionIndex);
         if (savedAnswer != null && savedAnswer.startsWith("翻译：")) {
             etTranslation.setText(savedAnswer.substring(3));
-        } else if (savedAnswer != null) {
+        } else if (savedAnswer != null && !savedAnswer.isEmpty()) {
             etTranslation.setText(savedAnswer);
         } else {
             etTranslation.setText("");
@@ -1120,10 +1218,17 @@ public class ExamAnswerActivity extends AppCompatActivity {
         layoutTranslation.setVisibility(View.GONE);
         layoutWriting.setVisibility(View.VISIBLE);
 
-        // 显示完整的写作要求（Part A + Part B）
+        // 显示写作题目要求
         if (question.question != null && !question.question.isEmpty()) {
             tvPassage.setVisibility(View.VISIBLE);
-            tvPassage.setText(question.question);
+            // 根据写作类型显示不同的标题
+            String typeLabel = "";
+            if ("PART_A".equals(question.writingType)) {
+                typeLabel = "【应用文写作 - 满分10分】\n\n";
+            } else if ("PART_B".equals(question.writingType)) {
+                typeLabel = "【大作文 - 满分15分】\n\n";
+            }
+            tvPassage.setText(typeLabel + question.question);
         } else {
             tvPassage.setVisibility(View.GONE);
         }
@@ -1132,6 +1237,24 @@ public class ExamAnswerActivity extends AppCompatActivity {
         if (tvBottomQuestion != null) {
             tvBottomQuestion.setVisibility(View.GONE);
         }
+
+        // 设置写作提示
+        if ("PART_A".equals(question.writingType)) {
+            etWriting.setHint("请在此输入应用文（约100词）...");
+        } else {
+            etWriting.setHint("请在此输入作文（160-200词）...");
+        }
+        
+        // 恢复之前输入的写作内容
+        String savedAnswer = userAnswers.get(currentQuestionIndex);
+        if (savedAnswer != null && savedAnswer.startsWith("作文：")) {
+            etWriting.setText(savedAnswer.substring(3));
+        } else if (savedAnswer != null && !savedAnswer.isEmpty()) {
+            etWriting.setText(savedAnswer);
+        } else {
+            etWriting.setText("");
+        }
+    }
 
         // 设置简洁的输入提示
         etWriting.setHint("请在此输入作文内容...");
@@ -1319,6 +1442,9 @@ public class ExamAnswerActivity extends AppCompatActivity {
                 studyRecord.setNotes("真题练习 - " + examTitle + " " + examYear + " - 得分:" + result.getTotalScore());
                 studyRecordRepository.addStudyRecord(studyRecord);
                 
+                // 【智能任务完成跟踪】提交真题后记录完成一套真题
+                TaskProgressTracker.getInstance(ExamAnswerActivity.this).recordProgress("real_exam", 1);
+                
                 // 注意：gradeTranslationAndWriting是异步的，它会在完成后调用finishGrading
                 // finishGrading会保存成绩并跳转到成绩详情页
                 
@@ -1439,6 +1565,17 @@ public class ExamAnswerActivity extends AppCompatActivity {
     /**
      * 根据当前题目索引获取题号显示范围
      * @return int数组，[起始索引, 结束索引]（左闭右开区间）
+     * 
+     * 题目结构（共52题）：
+     * - 完形填空: 1-20题 (索引0-19)
+     * - 阅读理解 Text 1: 21-25题 (索引20-24)
+     * - 阅读理解 Text 2: 26-30题 (索引25-29)
+     * - 阅读理解 Text 3: 31-35题 (索引30-34)
+     * - 阅读理解 Text 4: 36-40题 (索引35-39)
+     * - 新题型: 41-45题 (索引40-44)
+     * - 翻译: 46-50题 (索引45-49)
+     * - 写作 Part A: 51题 (索引50)
+     * - 写作 Part B: 52题 (索引51)
      */
     private int[] getQuestionNumberRange() {
         if (currentQuestionIndex < 20) {
@@ -1453,10 +1590,10 @@ public class ExamAnswerActivity extends AppCompatActivity {
             return new int[]{35, 40}; // 阅读理解 Text 4: 36-40题
         } else if (currentQuestionIndex < 45) {
             return new int[]{40, 45}; // 新题型: 41-45题
-        } else if (currentQuestionIndex == 45) {
-            return new int[]{45, 46}; // 翻译: 46题
+        } else if (currentQuestionIndex < 50) {
+            return new int[]{45, 50}; // 翻译: 46-50题
         } else {
-            return new int[]{46, 47}; // 写作: 47题
+            return new int[]{50, 52}; // 写作: 51-52题
         }
     }
     
@@ -1887,78 +2024,296 @@ public class ExamAnswerActivity extends AppCompatActivity {
         return result;
     }
     
+    // 用于存储翻译题批改结果的临时变量
+    private float[] translationScores = new float[5];
+    private StringBuilder translationComments = new StringBuilder();
+    private int translationGradedCount = 0;
+    
+    // 用于存储写作题批改结果的临时变量
+    private float writingAScoreTemp = 0;
+    private String writingACommentTemp = "";
+    private float writingBScoreTemp = 0;
+    private String writingBCommentTemp = "";
+    
     /**
-     * AI批改翻译和写作
+     * AI批改翻译和写作（重构版本）
+     * 支持分别批改5道翻译题和2道写作题
      */
     private void gradeTranslationAndWriting(ExamResultEntity result) {
-        // 查找翻译和写作答案
-        String translationAnswer = null;
-        final String[] writingAnswerHolder = {null};
-        String translationTopic = "";
-        final String[] writingTopicHolder = {""};
+        // 重置临时变量
+        translationScores = new float[5];
+        translationComments = new StringBuilder();
+        translationGradedCount = 0;
+        writingAScoreTemp = 0;
+        writingACommentTemp = "";
+        writingBScoreTemp = 0;
+        writingBCommentTemp = "";
+        
+        // 收集所有翻译题和写作题
+        java.util.List<Integer> translationIndices = new java.util.ArrayList<>();
+        java.util.List<Integer> writingAIndices = new java.util.ArrayList<>();
+        java.util.List<Integer> writingBIndices = new java.util.ArrayList<>();
         
         for (int i = 0; i < questions.size(); i++) {
             ExamQuestion question = questions.get(i);
-            String answer = userAnswers.get(i);
-            
-            if (question.type == QuestionType.TRANSLATION && answer != null) {
-                if (answer.startsWith("翻译：")) {
-                    translationAnswer = answer.substring(3);
-                } else {
-                    translationAnswer = answer;
+            if (question.type == QuestionType.TRANSLATION) {
+                translationIndices.add(i);
+            } else if (question.type == QuestionType.WRITING) {
+                if ("PART_A".equals(question.writingType)) {
+                    writingAIndices.add(i);
+                } else if ("PART_B".equals(question.writingType)) {
+                    writingBIndices.add(i);
                 }
-                translationTopic = question.question;
-            } else if (question.type == QuestionType.WRITING && answer != null) {
-                if (answer.startsWith("作文：")) {
-                    writingAnswerHolder[0] = answer.substring(3);
-                } else {
-                    writingAnswerHolder[0] = answer;
-                }
-                writingTopicHolder[0] = question.question;
             }
         }
         
-        // 批改翻译
-        if (translationAnswer != null && !translationAnswer.trim().isEmpty()) {
-            updateGradingDialog("正在批改翻译题...");
-            
-            String referenceTranslation = "请将英文段落翻译成中文，注意准确性和流畅性。";  // 参考译文
-            
-            final String finalTransAnswer = translationAnswer;
-            zhipuAIService.gradeTranslation(translationAnswer, referenceTranslation, new ZhipuAIService.GradeCallback() {
-                @Override
-                public void onSuccess(ZhipuAIService.GradeResult gradeResult) {
-                    result.setTranslationScore(gradeResult.getScore());
-                    result.setTranslationComment(gradeResult.getComment());
-                    android.util.Log.d("ExamAnswerActivity", "翻译批改完成 - 得分:" + gradeResult.getScore() + ", 评语:" + gradeResult.getComment());
-                    
-                    // 批改写作
-                    gradeWritingInternal(result, writingAnswerHolder[0], writingTopicHolder[0]);
-                }
-                
-                @Override
-                public void onError(String error) {
-                    android.util.Log.e("ExamAnswerActivity", "翻译批改失败: " + error);
-                    // 批改失败给默认分数
-                    result.setTranslationScore(10.0f);
-                    result.setTranslationComment("AI批改失败，系统给予默认分数。");
-                    
-                    // 继续批改写作
-                    gradeWritingInternal(result, writingAnswerHolder[0], writingTopicHolder[0]);
-                }
-            });
+        android.util.Log.d("ExamAnswerActivity", "找到翻译题: " + translationIndices.size() + 
+            ", Part A写作: " + writingAIndices.size() + ", Part B写作: " + writingBIndices.size());
+        
+        // 开始批改翻译题
+        if (!translationIndices.isEmpty()) {
+            gradeTranslationsSequentially(result, translationIndices, 0, writingAIndices, writingBIndices);
         } else {
-            // 未作答翻译题
+            // 没有翻译题，直接批改写作
             result.setTranslationScore(0.0f);
             result.setTranslationComment("未作答");
-            
-            // 批改写作
-            gradeWritingInternal(result, writingAnswerHolder[0], writingTopicHolder[0]);
+            gradeWritingPartAInternal(result, writingAIndices, writingBIndices);
         }
     }
     
     /**
-     * 批改写作（内部方法）
+     * 顺序批改翻译题
+     */
+    private void gradeTranslationsSequentially(ExamResultEntity result, 
+            java.util.List<Integer> translationIndices, int currentIndex,
+            java.util.List<Integer> writingAIndices, java.util.List<Integer> writingBIndices) {
+        
+        if (currentIndex >= translationIndices.size()) {
+            // 所有翻译题批改完成，计算总分
+            float totalTranslationScore = 0;
+            for (float score : translationScores) {
+                totalTranslationScore += score;
+            }
+            result.setTranslationScore(totalTranslationScore);
+            result.setTranslationComment(translationComments.toString().trim());
+            
+            android.util.Log.d("ExamAnswerActivity", "翻译题批改完成 - 总分:" + totalTranslationScore);
+            
+            // 继续批改写作Part A
+            gradeWritingPartAInternal(result, writingAIndices, writingBIndices);
+            return;
+        }
+        
+        int questionIndex = translationIndices.get(currentIndex);
+        ExamQuestion question = questions.get(questionIndex);
+        String answer = userAnswers.get(questionIndex);
+        
+        // 提取用户答案
+        String userTranslation = "";
+        if (answer != null) {
+            if (answer.startsWith("翻译：")) {
+                userTranslation = answer.substring(3);
+            } else {
+                userTranslation = answer;
+            }
+        }
+        
+        int questionNumber = 46 + currentIndex; // 翻译题从46题开始
+        updateGradingDialog("正在批改翻译第" + questionNumber + "题 (" + (currentIndex + 1) + "/5)...");
+        
+        if (userTranslation.trim().isEmpty()) {
+            // 未作答
+            translationScores[currentIndex] = 0;
+            translationComments.append("第").append(questionNumber).append("题：未作答\n");
+            // 继续下一题
+            gradeTranslationsSequentially(result, translationIndices, currentIndex + 1, writingAIndices, writingBIndices);
+        } else {
+            // 调用AI批改
+            String referenceAnswer = question.referenceAnswer != null ? question.referenceAnswer : "";
+            String originalText = question.passage != null ? question.passage : "";
+            
+            final int idx = currentIndex;
+            final int qNum = questionNumber;
+            
+            zhipuAIService.gradeTranslationWithReference(userTranslation, referenceAnswer, originalText, 3.0f,
+                new ZhipuAIService.GradeCallback() {
+                    @Override
+                    public void onSuccess(ZhipuAIService.GradeResult gradeResult) {
+                        translationScores[idx] = gradeResult.getScore();
+                        translationComments.append("第").append(qNum).append("题(").append(String.format("%.1f", gradeResult.getScore())).append("分)：")
+                            .append(gradeResult.getComment()).append("\n");
+                        android.util.Log.d("ExamAnswerActivity", "翻译第" + qNum + "题批改完成 - 得分:" + gradeResult.getScore());
+                        // 继续下一题
+                        gradeTranslationsSequentially(result, translationIndices, idx + 1, writingAIndices, writingBIndices);
+                    }
+                    
+                    @Override
+                    public void onError(String error) {
+                        android.util.Log.e("ExamAnswerActivity", "翻译第" + qNum + "题批改失败: " + error);
+                        // 批改失败给默认分数
+                        translationScores[idx] = 2.0f;
+                        translationComments.append("第").append(qNum).append("题(2.0分)：AI批改失败，给予默认分数\n");
+                        // 继续下一题
+                        gradeTranslationsSequentially(result, translationIndices, idx + 1, writingAIndices, writingBIndices);
+                    }
+                });
+        }
+    }
+    
+    /**
+     * 批改写作Part A
+     */
+    private void gradeWritingPartAInternal(ExamResultEntity result, 
+            java.util.List<Integer> writingAIndices, java.util.List<Integer> writingBIndices) {
+        
+        if (writingAIndices.isEmpty()) {
+            // 没有Part A写作题
+            result.setWritingScore(0.0f);
+            result.setWritingComment("未作答");
+            // 继续批改Part B
+            gradeWritingPartBInternal(result, writingBIndices);
+            return;
+        }
+        
+        int questionIndex = writingAIndices.get(0);
+        ExamQuestion question = questions.get(questionIndex);
+        String answer = userAnswers.get(questionIndex);
+        
+        // 提取用户答案
+        String userEssay = "";
+        if (answer != null) {
+            if (answer.startsWith("作文：")) {
+                userEssay = answer.substring(3);
+            } else {
+                userEssay = answer;
+            }
+        }
+        
+        updateGradingDialog("正在批改写作Part A...");
+        
+        if (userEssay.trim().isEmpty()) {
+            // 未作答
+            writingAScoreTemp = 0;
+            writingACommentTemp = "Part A：未作答";
+            // 继续批改Part B
+            gradeWritingPartBInternal(result, writingBIndices);
+        } else {
+            String topic = question.question != null ? question.question : "";
+            
+            zhipuAIService.gradeWritingPartA(userEssay, topic, new ZhipuAIService.GradeCallback() {
+                @Override
+                public void onSuccess(ZhipuAIService.GradeResult gradeResult) {
+                    writingAScoreTemp = gradeResult.getScore();
+                    writingACommentTemp = "Part A(" + String.format("%.1f", gradeResult.getScore()) + "分)：" + gradeResult.getComment();
+                    android.util.Log.d("ExamAnswerActivity", "写作Part A批改完成 - 得分:" + gradeResult.getScore());
+                    // 继续批改Part B
+                    gradeWritingPartBInternal(result, writingBIndices);
+                }
+                
+                @Override
+                public void onError(String error) {
+                    android.util.Log.e("ExamAnswerActivity", "写作Part A批改失败: " + error);
+                    // 批改失败给默认分数
+                    writingAScoreTemp = 6.0f;
+                    writingACommentTemp = "Part A(6.0分)：AI批改失败，给予默认分数";
+                    // 继续批改Part B
+                    gradeWritingPartBInternal(result, writingBIndices);
+                }
+            });
+        }
+    }
+    
+    /**
+     * 批改写作Part B
+     */
+    private void gradeWritingPartBInternal(ExamResultEntity result, java.util.List<Integer> writingBIndices) {
+        
+        if (writingBIndices.isEmpty()) {
+            // 没有Part B写作题，完成批改
+            float totalWritingScore = writingAScoreTemp + writingBScoreTemp;
+            result.setWritingScore(totalWritingScore);
+            String comment = writingACommentTemp;
+            if (!writingBCommentTemp.isEmpty()) {
+                comment += "\n" + writingBCommentTemp;
+            }
+            result.setWritingComment(comment);
+            finishGrading(result);
+            return;
+        }
+        
+        int questionIndex = writingBIndices.get(0);
+        ExamQuestion question = questions.get(questionIndex);
+        String answer = userAnswers.get(questionIndex);
+        
+        // 提取用户答案
+        String userEssay = "";
+        if (answer != null) {
+            if (answer.startsWith("作文：")) {
+                userEssay = answer.substring(3);
+            } else {
+                userEssay = answer;
+            }
+        }
+        
+        updateGradingDialog("正在批改写作Part B...");
+        
+        if (userEssay.trim().isEmpty()) {
+            // 未作答
+            writingBScoreTemp = 0;
+            writingBCommentTemp = "Part B：未作答";
+            // 完成批改
+            float totalWritingScore = writingAScoreTemp + writingBScoreTemp;
+            result.setWritingScore(totalWritingScore);
+            String comment = writingACommentTemp;
+            if (!writingBCommentTemp.isEmpty()) {
+                comment += "\n" + writingBCommentTemp;
+            }
+            result.setWritingComment(comment);
+            finishGrading(result);
+        } else {
+            String topic = question.question != null ? question.question : "";
+            
+            zhipuAIService.gradeWritingPartB(userEssay, topic, new ZhipuAIService.GradeCallback() {
+                @Override
+                public void onSuccess(ZhipuAIService.GradeResult gradeResult) {
+                    writingBScoreTemp = gradeResult.getScore();
+                    writingBCommentTemp = "Part B(" + String.format("%.1f", gradeResult.getScore()) + "分)：" + gradeResult.getComment();
+                    android.util.Log.d("ExamAnswerActivity", "写作Part B批改完成 - 得分:" + gradeResult.getScore());
+                    
+                    // 完成批改
+                    float totalWritingScore = writingAScoreTemp + writingBScoreTemp;
+                    result.setWritingScore(totalWritingScore);
+                    String comment = writingACommentTemp;
+                    if (!writingBCommentTemp.isEmpty()) {
+                        comment += "\n" + writingBCommentTemp;
+                    }
+                    result.setWritingComment(comment);
+                    finishGrading(result);
+                }
+                
+                @Override
+                public void onError(String error) {
+                    android.util.Log.e("ExamAnswerActivity", "写作Part B批改失败: " + error);
+                    // 批改失败给默认分数
+                    writingBScoreTemp = 10.0f;
+                    writingBCommentTemp = "Part B(10.0分)：AI批改失败，给予默认分数";
+                    
+                    // 完成批改
+                    float totalWritingScore = writingAScoreTemp + writingBScoreTemp;
+                    result.setWritingScore(totalWritingScore);
+                    String comment = writingACommentTemp;
+                    if (!writingBCommentTemp.isEmpty()) {
+                        comment += "\n" + writingBCommentTemp;
+                    }
+                    result.setWritingComment(comment);
+                    finishGrading(result);
+                }
+            });
+        }
+    }
+    
+    /**
+     * 批改写作（旧方法，保持兼容）
      */
     private void gradeWritingInternal(ExamResultEntity result, String writingAnswer, String writingTopic) {
         if (writingAnswer != null && !writingAnswer.trim().isEmpty()) {
