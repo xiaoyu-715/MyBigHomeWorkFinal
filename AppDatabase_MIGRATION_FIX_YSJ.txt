@@ -1,0 +1,231 @@
+// ============================================
+// AppDatabase.java 迁移代码修复方案 YSJ
+// ============================================
+// 
+// 由于自动编辑工具多次失败，请按以下步骤手动修复：
+//
+// 【步骤1】打开文件：app/src/main/java/com/example/mybighomework/database/AppDatabase.java
+// 【步骤2】找到第393行（MIGRATION_19_20 结束的 };）
+// 【步骤3】在 }; 后面添加 MIGRATION_20_21 代码块
+// 【步骤4】找到第478行（WordLearningProgressDao 声明后）
+// 【步骤5】添加单词搜索功能相关的 DAO 方法声明
+// 【步骤6】找到第501行（MIGRATION_19_20 后）
+// 【步骤7】添加 MIGRATION_20_21 到迁移列表
+//
+// ============================================
+// 请将以下代码复制到 AppDatabase.java 中对应位置
+
+// ========== MIGRATION_17_18 ==========
+// 位置：第314行附近
+// 替换从 "static final Migration MIGRATION_17_18" 到下一个 Migration 定义之前的所有内容
+
+    // 版本17到18：为daily_tasks表添加actionType字段
+    static final Migration MIGRATION_17_18 = new Migration(17, 18) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE daily_tasks ADD COLUMN actionType TEXT");
+        }
+    };
+
+// ========== MIGRATION_18_19 ==========
+// 位置：紧接着 MIGRATION_17_18 之后
+
+    // 版本18到19：为daily_tasks表添加任务完成条件字段
+    static final Migration MIGRATION_18_19 = new Migration(18, 19) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            database.execSQL("ALTER TABLE daily_tasks ADD COLUMN completionType TEXT DEFAULT 'simple'");
+            database.execSQL("ALTER TABLE daily_tasks ADD COLUMN completionTarget INTEGER NOT NULL DEFAULT 1");
+            database.execSQL("ALTER TABLE daily_tasks ADD COLUMN currentProgress INTEGER NOT NULL DEFAULT 0");
+        }
+    };
+
+// ========== MIGRATION_19_20 ==========
+// 位置：紧接着 MIGRATION_18_19 之后
+
+    // 版本19到20：添加词典数据相关表
+    static final Migration MIGRATION_19_20 = new Migration(19, 20) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            // 创建词典单词表
+            database.execSQL("CREATE TABLE IF NOT EXISTS dictionary_words (" +
+                "id TEXT NOT NULL PRIMARY KEY, " +
+                "word TEXT, " +
+                "phoneticUk TEXT, " +
+                "phoneticUs TEXT, " +
+                "frequency REAL NOT NULL DEFAULT 0, " +
+                "difficulty INTEGER NOT NULL DEFAULT 0, " +
+                "acknowledgeRate REAL NOT NULL DEFAULT 0, " +
+                "translation TEXT)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_dictionary_words_word ON dictionary_words(word)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_dictionary_words_difficulty ON dictionary_words(difficulty)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_dictionary_words_frequency ON dictionary_words(frequency)");
+
+            // 创建词书表
+            database.execSQL("CREATE TABLE IF NOT EXISTS books (" +
+                "id TEXT NOT NULL PRIMARY KEY, " +
+                "parentId TEXT, " +
+                "level INTEGER NOT NULL DEFAULT 0, " +
+                "bookOrder REAL NOT NULL DEFAULT 0, " +
+                "name TEXT, " +
+                "itemNum INTEGER NOT NULL DEFAULT 0, " +
+                "directItemNum INTEGER NOT NULL DEFAULT 0, " +
+                "author TEXT, " +
+                "fullName TEXT, " +
+                "comment TEXT, " +
+                "organization TEXT, " +
+                "publisher TEXT, " +
+                "version TEXT, " +
+                "flag TEXT)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_books_parentId ON books(parentId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_books_level ON books(level)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_books_bookOrder ON books(bookOrder)");
+
+            // 创建词书-单词关联表
+            database.execSQL("CREATE TABLE IF NOT EXISTS book_word_relations (" +
+                "id TEXT NOT NULL PRIMARY KEY, " +
+                "bookId TEXT NOT NULL, " +
+                "wordId TEXT NOT NULL, " +
+                "flag TEXT, " +
+                "tag TEXT, " +
+                "wordOrder INTEGER NOT NULL DEFAULT 0, " +
+                "FOREIGN KEY(bookId) REFERENCES books(id) ON DELETE CASCADE, " +
+                "FOREIGN KEY(wordId) REFERENCES dictionary_words(id) ON DELETE CASCADE)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_book_word_relations_bookId ON book_word_relations(bookId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_book_word_relations_wordId ON book_word_relations(wordId)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_book_word_relations_bookId_wordId ON book_word_relations(bookId, wordId)");
+
+            // 创建单词学习进度表
+            database.execSQL("CREATE TABLE IF NOT EXISTS word_learning_progress (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "userId TEXT, " +
+                "wordId TEXT, " +
+                "bookId TEXT, " +
+                "correctCount INTEGER NOT NULL DEFAULT 0, " +
+                "wrongCount INTEGER NOT NULL DEFAULT 0, " +
+                "isMastered INTEGER NOT NULL DEFAULT 0, " +
+                "memoryStrength INTEGER NOT NULL DEFAULT 1, " +
+                "lastStudyTime INTEGER NOT NULL DEFAULT 0, " +
+                "nextReviewTime INTEGER NOT NULL DEFAULT 0, " +
+                "reviewCount INTEGER NOT NULL DEFAULT 0, " +
+                "createdTime INTEGER NOT NULL DEFAULT 0)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_word_learning_progress_userId_wordId ON word_learning_progress(userId, wordId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_word_learning_progress_nextReviewTime ON word_learning_progress(nextReviewTime)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_word_learning_progress_isMastered ON word_learning_progress(isMastered)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_word_learning_progress_bookId ON word_learning_progress(bookId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_word_learning_progress_userId ON word_learning_progress(userId)");
+        }
+    };
+
+// ========== MIGRATION_20_21 ==========
+// 位置：紧接着 MIGRATION_19_20 之后
+
+    // 版本20到21：添加单词搜索功能相关表
+    static final Migration MIGRATION_20_21 = new Migration(20, 21) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            // 创建例句表
+            database.execSQL("CREATE TABLE IF NOT EXISTS example_sentences (" +
+                "id TEXT NOT NULL PRIMARY KEY, " +
+                "wordId TEXT NOT NULL, " +
+                "englishSentence TEXT NOT NULL, " +
+                "chineseSentence TEXT NOT NULL, " +
+                "source TEXT, " +
+                "difficulty INTEGER NOT NULL DEFAULT 5, " +
+                "category TEXT, " +
+                "FOREIGN KEY(wordId) REFERENCES dictionary_words(id) ON DELETE CASCADE)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_example_sentences_wordId ON example_sentences(wordId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_example_sentences_difficulty ON example_sentences(difficulty)");
+            
+            // 创建用户单词收藏表（生词本）
+            database.execSQL("CREATE TABLE IF NOT EXISTS user_word_collection (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "wordId TEXT NOT NULL, " +
+                "userId TEXT NOT NULL, " +
+                "collectedAt INTEGER NOT NULL, " +
+                "note TEXT, " +
+                "FOREIGN KEY(wordId) REFERENCES dictionary_words(id) ON DELETE CASCADE)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_user_word_collection_wordId_userId ON user_word_collection(wordId, userId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_user_word_collection_userId ON user_word_collection(userId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_user_word_collection_collectedAt ON user_word_collection(collectedAt)");
+            
+            // 创建搜索历史表
+            database.execSQL("CREATE TABLE IF NOT EXISTS search_history (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "keyword TEXT NOT NULL, " +
+                "searchTime INTEGER NOT NULL, " +
+                "userId TEXT NOT NULL)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_search_history_searchTime ON search_history(searchTime DESC)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_search_history_userId ON search_history(userId)");
+        }
+    };
+
+// ========== DAO 方法声明 ==========
+// 位置：在所有 Migration 定义之后，getInstance 方法之前
+
+    public abstract StudyPlanDao studyPlanDao();
+    public abstract VocabularyDao vocabularyDao();
+    public abstract ExamDao examDao();
+    public abstract UserSettingsDao userSettingsDao();
+    public abstract QuestionDao questionDao();
+    public abstract StudyRecordDao studyRecordDao();
+    public abstract UserDao userDao();
+    public abstract WrongQuestionDao wrongQuestionDao();
+    public abstract DailySentenceDao dailySentenceDao();
+    public abstract TranslationHistoryDao translationHistoryDao();
+    public abstract ExamAnswerDao examAnswerDao();
+    public abstract ExamProgressDao examProgressDao();
+    public abstract QuestionNoteDao questionNoteDao();
+    public abstract ExamResultDao examResultDao();
+    public abstract StudyPhaseDao studyPhaseDao();
+    public abstract DailyTaskDao dailyTaskDao();
+    
+    // 词典数据相关DAO
+    public abstract DictionaryWordDao dictionaryWordDao();
+    public abstract BookDao bookDao();
+    public abstract BookWordRelationDao bookWordRelationDao();
+    public abstract WordLearningProgressDao wordLearningProgressDao();
+    
+    // 单词搜索功能相关DAO
+    public abstract ExampleSentenceDao exampleSentenceDao();
+    public abstract UserWordCollectionDao userWordCollectionDao();
+    public abstract SearchHistoryDao searchHistoryDao();
+
+// ========== 迁移列表更新 ==========
+// 位置：在 getInstance 方法中的 .addMigrations() 调用处
+// 需要添加 MIGRATION_20_21 到列表末尾
+
+                    .addMigrations(
+                        MIGRATION_8_9,
+                        MIGRATION_9_10,
+                        MIGRATION_10_11,
+                        MIGRATION_11_12,
+                        MIGRATION_12_13,
+                        MIGRATION_13_14,
+                        MIGRATION_14_15,
+                        MIGRATION_15_16,
+                        MIGRATION_16_17,
+                        MIGRATION_17_18,
+                        MIGRATION_18_19,
+                        MIGRATION_19_20,
+                        MIGRATION_20_21  // <-- 添加这一行
+                    )
+
+// ============================================
+// 修复说明
+// ============================================
+// 1. 当前文件由于多次编辑操作导致结构严重损坏
+// 2. 建议手动打开 AppDatabase.java 文件
+// 3. 按照上述标注的位置，逐个替换对应的代码段
+// 4. 确保所有括号和分号正确匹配
+// 5. 保存文件后同步 Gradle
+
+// ============================================
+// 关键修复点
+// ============================================
+// ✓ MIGRATION_17_18: 补全 migrate 方法体
+// ✓ MIGRATION_18_19: 添加完整定义（之前缺失）
+// ✓ MIGRATION_19_20: 补全所有4个表的创建
+// ✓ MIGRATION_20_21: 添加完整定义（单词搜索功能）
+// ✓ DAO方法声明: 恢复所有抽象方法
+// ✓ 迁移列表: 添加 MIGRATION_20_21

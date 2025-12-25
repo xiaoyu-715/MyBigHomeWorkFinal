@@ -54,6 +54,12 @@ import com.example.mybighomework.database.entity.UserSettingsEntity;
 import com.example.mybighomework.database.entity.VocabularyRecordEntity;
 import com.example.mybighomework.database.entity.WordLearningProgressEntity;
 import com.example.mybighomework.database.entity.WrongQuestionEntity;
+import com.example.mybighomework.database.entity.ExampleSentenceEntity;
+import com.example.mybighomework.database.entity.UserWordCollectionEntity;
+import com.example.mybighomework.database.entity.SearchHistoryEntity;
+import com.example.mybighomework.database.dao.ExampleSentenceDao;
+import com.example.mybighomework.database.dao.UserWordCollectionDao;
+import com.example.mybighomework.database.dao.SearchHistoryDao;
 
 @Database(
     entities = {
@@ -77,9 +83,13 @@ import com.example.mybighomework.database.entity.WrongQuestionEntity;
         DictionaryWordEntity.class,
         BookEntity.class,
         BookWordRelationEntity.class,
-        WordLearningProgressEntity.class
+        WordLearningProgressEntity.class,
+        // 单词搜索功能相关实体
+        ExampleSentenceEntity.class,
+        UserWordCollectionEntity.class,
+        SearchHistoryEntity.class
     },
-    version = 20,
+    version = 21,
     exportSchema = false
 )
 @TypeConverters({DateConverter.class, StringArrayConverter.class})
@@ -391,7 +401,48 @@ public abstract class AppDatabase extends RoomDatabase {
             database.execSQL("CREATE INDEX IF NOT EXISTS index_word_learning_progress_userId ON word_learning_progress(userId)");
         }
     };
+
+        // 版本20到21：添加单词搜索功能相关表
+    static final Migration MIGRATION_20_21 = new Migration(20, 21) {
+        @Override
+        public void migrate(SupportSQLiteDatabase database) {
+            // 创建例句表
+            database.execSQL("CREATE TABLE IF NOT EXISTS example_sentences (" +
+                "id TEXT NOT NULL PRIMARY KEY, " +
+                "wordId TEXT NOT NULL, " +
+                "englishSentence TEXT NOT NULL, " +
+                "chineseSentence TEXT NOT NULL, " +
+                "source TEXT, " +
+                "difficulty INTEGER NOT NULL DEFAULT 5, " +
+                "category TEXT, " +
+                "FOREIGN KEY(wordId) REFERENCES dictionary_words(id) ON DELETE CASCADE)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_example_sentences_wordId ON example_sentences(wordId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_example_sentences_difficulty ON example_sentences(difficulty)");
+            
+            // 创建用户单词收藏表（生词本）
+            database.execSQL("CREATE TABLE IF NOT EXISTS user_word_collection (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "wordId TEXT NOT NULL, " +
+                "userId TEXT NOT NULL, " +
+                "collectedAt INTEGER NOT NULL, " +
+                "note TEXT, " +
+                "FOREIGN KEY(wordId) REFERENCES dictionary_words(id) ON DELETE CASCADE)");
+            database.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS index_user_word_collection_wordId_userId ON user_word_collection(wordId, userId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_user_word_collection_userId ON user_word_collection(userId)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_user_word_collection_collectedAt ON user_word_collection(collectedAt)");
+            
+            // 创建搜索历史表
+            database.execSQL("CREATE TABLE IF NOT EXISTS search_history (" +
+                "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                "keyword TEXT NOT NULL, " +
+                "searchTime INTEGER NOT NULL, " +
+                "userId TEXT NOT NULL)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_search_history_searchTime ON search_history(searchTime DESC)");
+            database.execSQL("CREATE INDEX IF NOT EXISTS index_search_history_userId ON search_history(userId)");
+        }
+    };
     
+
     /**
      * 修复旧任务的actionType字段
      * 对于actionType为空的任务，根据任务内容智能推断
@@ -476,6 +527,10 @@ public abstract class AppDatabase extends RoomDatabase {
     public abstract BookDao bookDao();
     public abstract BookWordRelationDao bookWordRelationDao();
     public abstract WordLearningProgressDao wordLearningProgressDao();
+    // 单词搜索功能相关DAO
+    public abstract ExampleSentenceDao exampleSentenceDao();
+    public abstract UserWordCollectionDao userWordCollectionDao();
+    public abstract SearchHistoryDao searchHistoryDao();
 
     public static AppDatabase getInstance(Context context) {
         if (INSTANCE == null) {
@@ -498,7 +553,8 @@ public abstract class AppDatabase extends RoomDatabase {
                         MIGRATION_16_17,
                         MIGRATION_17_18,
                         MIGRATION_18_19,
-                        MIGRATION_19_20
+                        MIGRATION_19_20,
+                        MIGRATION_20_21
                     )
                     .build();
 

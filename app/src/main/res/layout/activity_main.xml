@@ -44,7 +44,15 @@
                     android:textSize="20sp"
                     android:textStyle="bold" />
 
-
+                <ImageButton
+                    android:id="@+id/btn_word_search"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:layout_gravity="center_vertical"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="单词搜索"
+                    android:src="@drawable/ic_search"
+                    app:tint="@android:color/white" />
 
             </LinearLayout>
 

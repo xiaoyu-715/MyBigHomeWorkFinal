@@ -157,6 +157,15 @@
             android:exported="false"
             android:label="AI学习助手"
             android:windowSoftInputMode="adjustResize" />
+        <activity
+            android:name=".WordSearchActivityYSJ"
+            android:exported="false"
+            android:label="单词搜索"
+            android:windowSoftInputMode="adjustPan" />
+        <activity
+            android:name=".WordDetailActivityYSJ"
+            android:exported="false"
+            android:label="单词详情" />
         
         <!-- AutoGLM 无障碍服务 -->
         <service

@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Bundle;
 import android.view.View;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -41,6 +42,7 @@ public class MainActivity extends AppCompatActivity {
     private LinearLayout llTextTranslation;
     private LinearLayout llVocabularyBook;
     private TextView tvTaskProgress;
+    private ImageButton btnWordSearch;
 
     // 学习进度相关的TextView
     private TextView tvStudyDays;
@@ -105,7 +107,7 @@ public class MainActivity extends AppCompatActivity {
         llTextTranslation = findViewById(R.id.ll_text_translation);
         llVocabularyBook = findViewById(R.id.ll_vocabulary_book);
         tvTaskProgress = findViewById(R.id.tv_task_progress);
-
+        btnWordSearch = findViewById(R.id.btn_word_search);
         
         // 学习进度相关的TextView
         tvStudyDays = findViewById(R.id.tv_study_days);
@@ -265,6 +267,14 @@ public class MainActivity extends AppCompatActivity {
             }
         });
 
+        // 单词搜索点击事件
+        btnWordSearch.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent intent = new Intent(MainActivity.this, WordSearchActivityYSJ.class);
+                startActivity(intent);
+            }
+        });
     }
     
     private void updateTaskProgress() {

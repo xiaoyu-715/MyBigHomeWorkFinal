@@ -124,4 +124,9 @@
     <!-- 进度条颜色 -->
     <color name="progress_background">#E8E8E8</color>
     <color name="progress_indicator">#6B4FD8</color>
+    
+    <!-- 兼容性颜色别名 -->
+    <color name="colorPrimary">#5E8DCE</color>
+    <color name="colorAccent">#FFA76B</color>
+    <color name="green_dark">#3FA76B</color>
 </resources>
